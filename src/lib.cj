@@ -9,6 +9,7 @@ import std.regex.*
 import std.collection.*
 import encoding.base64.*
 import log.*
+import std.random.*
 
 let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
 
@@ -36,13 +37,68 @@ public class MailAddress <: ToString {
    }
 }
 
+
+public interface MailContent {
+}
+
+public interface MutilPart {
+}
+
+extend String <: MailContent  & MutilPart{
+}
+
+/*
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+aGVsbG8sIHNlbmQgYnkgUHl0aG9uLi4u
+*/
+public struct MimeText <: MailContent & MutilPart {
+     var text: String = ""
+     var contentType: String = ""
+
+     public init(text: String, contentType: String) {
+        this.text = text
+        this.contentType = contentType
+     }
+}
+
+
+public struct MimeFile <: MutilPart {
+     var data: Array<Byte> = []
+     var contentType: String = ""
+     var headers: ArrayList<(String, String)> = ArrayList()
+
+     public init(data: Array<Byte>, contentType: String) {
+        this.data = data
+        this.contentType = contentType
+     }
+
+     public init(data: Array<Byte>, contentType: String, headers: ArrayList<(String, String)>) {
+        this.data = data
+        this.contentType = contentType
+        this.headers = headers
+     }
+
+     public func addHeader(name: String, value: String) {
+        headers.append((name, value))
+     }
+}
+
+extend ArrayList<MutilPart> <: MailContent {
+}
+
+public type MutilPartContent = ArrayList<MutilPart>
+
+
 @Default
 @AllArgsConstructor
 public class SendMail {
    public var mailFrom: MailAddress
    public var rcptTo: Array<MailAddress>
    public var subject: String
-   public var data: String
+   public var data: MailContent = ""
 }
 
 
@@ -160,6 +216,89 @@ public class Smtp {
       }
       writeCommand("DATA")
       readCommand()
+      putMailData(mail)
+      writeCommand(".")
+      writeCommand("")
+      readCommand()
+   }
+
+
+   private func putMailData(mail: SendMail) {
+      if (let Some(data) <- mail.data as String) {
+         putMailAddresses(mail)
+         putMailSubject(mail)
+         writeCommand("")
+         for (line in data.split("\n")) {
+            if (line == ".") {
+               writeCommand("&#46;")
+            } else {
+               writeCommand(line)
+            }   
+         }
+      } else if (let Some(data) <- mail.data as MimeText) {
+         putMailAddresses(mail)
+         putMailSubject(mail)
+         writeCommand("Content-Type: ${data.contentType}; charset=\"UTF-8\"")
+         writeCommand("MIME-Version: 1.0")
+         writeCommand("Content-Transfer-Encoding: base64")
+         writeCommand("")
+         writeCommand(toBase64String(data.text.toArray()))
+      } else if (let Some(data) <- mail.data as MutilPartContent) {
+         let boundary = randomBoundary()
+         writeCommand("Content-Type: multipart/mixed; boundary=\"${boundary}\"")
+         writeCommand("MIME-Version: 1.0")
+         putMailAddresses(mail)
+         putMailSubject(mail)
+         for (part in data) {
+            writeCommand("")
+            writeCommand("--${boundary}")
+            if (let Some(part) <- part as String) {
+               writeCommand("Content-Type: text/plain; charset=\"UTF-8\"")
+               writeCommand("Content-Transfer-Encoding: base64")
+               writeCommand("")
+               writeCommand(toBase64String(part.toArray()))
+            } else if (let Some(part) <- part as MimeText) {
+               writeCommand("Content-Type: ${part.contentType}; charset=\"UTF-8\"")
+               writeCommand("Content-Transfer-Encoding: base64")
+               writeCommand("")
+               writeCommand(toBase64String(part.text.toArray()))
+            } else if (let Some(part) <- part as MimeFile) {
+               writeCommand("Content-Type: ${part.contentType}")
+               writeCommand("Content-Transfer-Encoding: base64")
+               for (header in part.headers) {
+                  writeCommand("${header[0]}: ${header[1]}")
+               }
+               writeCommand("")
+               writeCommand(toBase64String(part.data))
+            }
+         }
+         writeCommand("")
+         writeCommand("--${boundary}--")
+      }
+   }
+
+   private func randomBoundary() : String {
+      let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+      let m: Random = Random()
+      let str = ArrayList<Rune>()
+      for (i in 0..30) {
+         var idx = m.nextInt64();
+         if (idx < 0) {
+            idx = -idx
+         }
+         idx = idx % chars.size
+         str.append(Rune((chars[idx])))
+      }
+      String(str.toArray())
+   }
+
+   private func putMailSubject(mail: SendMail) {
+      if (mail.subject != "") {
+         writeCommand("Subject: ${mail.subject}")
+      }
+   }
+
+   private func putMailAddresses(mail: SendMail) {
       writeCommand("From: ${mail.mailFrom.toString()}")
       var to = ""
       for (rcpt in mail.rcptTo) {
@@ -169,20 +308,6 @@ public class Smtp {
          to += rcpt.toString()
       }
       writeCommand("To: ${to}")
-      if (mail.subject != "") {
-         writeCommand("Subject: ${mail.subject}")
-      }
-      writeCommand("")
-      for (line in mail.data.split("\n")) {
-         if (line == ".") {
-            writeCommand("&#46;")
-         } else {
-            writeCommand(line)
-         }   
-      }
-      writeCommand(".")
-      writeCommand("")
-      readCommand()
    }
 
    public func quit() {

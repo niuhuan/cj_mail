@@ -20,7 +20,9 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 
 - [x] SMTP
     - [x] 基础认证
-    - [x] 发送文本邮件
+    - [x] LOGIN认证
+    - [x] 发送文本/html邮件
+    - [x] 发送附件
 
 ## 🔖 用例
 
@@ -28,12 +30,6 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 import cj_mail.*
 
 main(): Int64 {
-   // 准备发送一个邮件
-   let mail = SendMail()
-   mail.mailFrom.name = "niuhuan"
-   mail.mailFrom.address = "niuhuan@mail.com"
-   mail.rcptTo = [MailAddress("niuhuan", "niuhuan@mail.com")]
-   mail.data = "Hello, World!"
    // 连接邮件服务器并发送
    let smtp = Smtp()
    smtp.host = "smtp.mail.com"
@@ -41,10 +37,39 @@ main(): Int64 {
    smtp.connect()
    smtp.plain("niuhuan@mail.com", "mailPassword")    // 基础认证
    // smtp.login("niuhuan@mail.com", "mailPassword") // LOGIN认证
-   smtp.send(mail)
+   smtp.send(textMail())
    // smtp.quit() // 我的服务器不支持quit命令, 所以将quit和close分开
    smtp.close()
    return 0
+}
+
+func textMail(): SendMail {
+   let mail = SendMail()
+   mail.mailFrom.name = "niuhuan"
+   mail.mailFrom.address = "niuhuan@mail.com"
+   mail.rcptTo = [MailAddress("niuhuan", "niuhuan@mail.com")]
+   mail.data = "Hello, World!"
+   // mail.data = MimeText("<h1>Hello, World!</h1>","text/html") // html渲染
+   mail
+}
+
+// 多分段带附件的邮件
+func mutilPartsMail(): SendMail {
+   let mail = SendMail()
+   mail.mailFrom.name = "niuhuan"
+   mail.mailFrom.address = "niuhuan@mail.com"
+   mail.rcptTo = [MailAddress("niuhuan", "niuhuan@mail.com")]
+   let content = ArrayList<MutilPart>()
+   // html 渲染邮件内容
+   content.append(MimeText("<h1>Hello, World!</h1>","text/html")) 
+   // 增加一个附件
+   content.append(MimeFile(
+    "Hello, World!".toArray(),
+    "application/octet-stream",
+    ArrayList<(String, String)>([("Content-Disposition", "attachment; filename=\"test.txt\"")])
+   ))
+   mail.data = content
+   mail
 }
 ```
 
@@ -54,14 +79,7 @@ main(): Int64 {
 
 #### 计划中的特性
 
-SMTP:
-
-- [ ] 支持更多种方式
-- [ ] 支持多媒体邮件
-
-POP
-
-- [ ] 还没有开发
+- [ ] POP/IMAP
 
 ## 📕 协议
 
