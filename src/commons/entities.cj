@@ -1,8 +1,7 @@
 package cj_mail.commons
 
 import std.collection.*
-
-let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
+import cj_lombok.*
 
 @Default
 @AllArgsConstructor
@@ -34,8 +33,8 @@ aGVsbG8sIHNlbmQgYnkgUHl0aG9uLi4u
 */
 @Default
 public struct MimeText <: MailContent & MutilPart {
-     var text: String = ""
-     var contentType: String = ""
+     public var text: String = ""
+     public var contentType: String = ""
 
      public init(text: String, contentType: String) {
         this.text = text
@@ -46,9 +45,9 @@ public struct MimeText <: MailContent & MutilPart {
 
 @Default
 public struct MimeFile <: MutilPart {
-     var data: Array<Byte> = []
-     var contentType: String = ""
-     var headers: ArrayList<(String, String)> = ArrayList()
+     public var data: Array<Byte> = []
+     public var contentType: String = ""
+     public var headers: ArrayList<(String, String)> = ArrayList()
 
      public init(data: Array<Byte>, contentType: String) {
         this.data = data

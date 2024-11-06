@@ -8,15 +8,10 @@ import std.collection.*
 import encoding.base64.*
 import log.*
 import std.random.*
+import cj_mail.commons.*
+import std.convert.*
 
-@Default
-@AllArgsConstructor
-public class SendMail {
-   public var mailFrom: MailAddress
-   public var rcptTo: Array<MailAddress>
-   public var subject: String
-   public var data: MailContent = ""
-}
+let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
 
 public class Smtp {
 
