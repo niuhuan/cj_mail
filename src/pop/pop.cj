@@ -177,8 +177,8 @@ public class Pop {
         (size, content)
     }
 
-    public func retrParse(msg: Int64) : (Int64, ReceiveMail) {
-        let (size, content) = retr(msg)
+    public func retrParse(msg: Int64) : ReceiveMail {
+        let (_, content) = retr(msg)
         var from = ""
         var to = ""
         var subject = ""
@@ -257,7 +257,7 @@ public class Pop {
                 textBody = String.fromUtf8(fromBase64String(textBody).getOrThrow())
             }
             mail.data = MimeText(textBody, contentTypeMime)
-            return (size, mail)
+            return mail
         } else if (contentTypeMime.startsWith("multipart/")) {
             var line =  lines.next().getOrThrow()
             // first boundary
@@ -267,7 +267,7 @@ public class Pop {
             // blank content
             if (line == "--${boundary}--") {
                 mail.data = MutilPartContent()
-                return (size, mail)
+                return mail
             }
             // children
             let parts = ArrayList<MutilPart>()
@@ -389,7 +389,7 @@ public class Pop {
                 }
             }
             mail.data = parts
-            return (size, mail)
+            return mail
         } else {
             var textBody = ""
             while(let Some(line) <- lines.next()) {
@@ -399,11 +399,11 @@ public class Pop {
                 textBody = String.fromUtf8(fromBase64String(textBody).getOrThrow())
             }
             mail.data = MimeText(textBody, contentTypeMime)
-            return (size, mail)
+            return mail
         }
         // text mail (or other)
         mail.data = content
-        return (size, mail)
+        return mail
     }
 
     public func dele(msg: Int64) {
