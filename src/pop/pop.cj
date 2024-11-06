@@ -166,50 +166,22 @@ public class Pop {
             throw Exception("Invalid response")
         }
         let size = Int64.parse(split[1])
-        var content = ""
+        var content = StringBuilder()
         while (true) {
             let line = readCommand()
             if (line == ".") {
                 break
             }
-            content += line + "\r\n"
+            content.append(line)
+            content.append("\r\n")
         }
-        (size, content)
+        (size, content.toString())
     }
 
     public func retrParse(msg: Int64) : ReceiveMail {
         let (_, content) = retr(msg)
-        var from = ""
-        var to = ""
-        var subject = ""
-        var contentType = ""
-        var contentTransferEncoding =""
-        // read header
-        let lines = content.lazySplit("\r\n")
-        while(true){
-            let line = lines.next().getOrThrow()
-            if (line == "") {
-                break
-            } else if (!line.contains(":")) {
-                throw Exception("Invalid response : ${line}")
-            }
-            let parts = line.split(":")
-            if (parts.size < 2) {
-                throw Exception("Invalid response : ${line}")
-            }
-            let key = parts[0].trimAscii()
-            let value = parts[1].trimAscii()
-            match (key) {
-                case "From" => from = value
-                case "To" => to = value
-                case "Subject" => subject = value
-                case "Content-Type" => contentType = value
-                case "Content-Transfer-Encoding" => contentTransferEncoding = value
-                case _ => 
-                    logger.debug("Ignore header : ${key}")
-            }
-        }
-        // parse header
+        let (from, to, subject, data) = parseMailContent(content)
+        
         let mail = ReceiveMail()
         if (from != "") {
             mail.mailFrom = parseMailAddress(from)
@@ -221,189 +193,11 @@ public class Pop {
         // "=?{charset}?{encoding}?{encoded_text}?="
         if (mail.subject.startsWith("=?utf-8?b?") && mail.subject.endsWith("?=")) {
             let encoded = mail.subject[10..mail.subject.size-2]
-            mail.subject = String.fromUtf8(fromBase64String(encoded).getOrThrow())
+            mail.subject = String.fromUtf8(fromBase64String(encoded.trimAscii().replace("\r\n", "")).getOrThrow())
         }
         // todo ?q? quopri
-        // parse mime
-        let parts = contentType.split(";")
-        let contentTypeMime = parts[0].trimAscii()
-        var boundary=""
-        var charset=""
-        for (p in parts[1..]) {
-            match (p.indexOf("=")) {
-                case Some(idx) =>
-                    let key = p[0..idx].trimAscii()
-                    var value = p[idx+1..].trimAscii()
-                    if (value.startsWith("\"") && value.endsWith("\"")) {
-                        value = value[1..value.size-1]
-                    }
-                    match (key) {
-                        case "boundary" => boundary = value
-                        case "charset" => charset = value
-                        case _ => 
-                            logger.debug("Ignore content type : ${key}")
-                    }
-                case None =>
-                    continue
-            }
-        }
-        // parse body
-        if (contentTypeMime.startsWith("text/")) {
-            var textBody = ""
-            while(let Some(line) <- lines.next()) {
-                textBody += line + "\r\n"
-            }
-            if ("base64" == contentTransferEncoding) {
-                textBody = String.fromUtf8(fromBase64String(textBody).getOrThrow())
-            }
-            mail.data = MimeText(textBody, contentTypeMime)
-            return mail
-        } else if (contentTypeMime.startsWith("multipart/")) {
-            var line =  lines.next().getOrThrow()
-            // first boundary
-            if (!line.startsWith("--${boundary}")) {
-                throw Exception("Invalid response : ${line}")
-            }
-            let mimeMutilParts = MimeMutilParts()
-            mail.data = mimeMutilParts
-            // blank content
-            if (line == "--${boundary}--") {
-                return mail
-            }
-            // children
-            var mutilPartContentTransferEncoding = ""
-            var mutilPartHeaders = ArrayList<(String,String)>()
-            var mutilPartContentMime = ""
-            var mutilPartContentCharset = ""
-            var mutilPartBoundary = ""
-            var mutilPartCharset = ""
-            while (true) {
-                var hasContinue = false
-                var hasBreak = false
-                while(true) {
-                    line = lines.next().getOrThrow()
-                    if (line == "") {
-                        break
-                    } else if (!line.contains(":")) {
-                        throw Exception("Invalid response : ${line}")
-                    }
-                    if (line.startsWith("--${boundary}")) {
-                        hasContinue = true
-                        if (line == "--${boundary}--") {
-                            hasBreak = true
-                        }
-                        // blank content
-                        if (mutilPartContentMime.contains("text/")) {
-                            mimeMutilParts.append(MimeText("", mutilPartContentMime))
-                        } else {
-                            mimeMutilParts.append(MimeFile([], mutilPartContentMime))
-                        }
-                        mutilPartContentTransferEncoding = ""
-                        mutilPartHeaders = ArrayList<(String,String)>()
-                        mutilPartContentMime = ""
-                        mutilPartContentCharset = ""
-                        mutilPartBoundary = ""
-                        mutilPartCharset = ""
-                        break
-                    }
-                    let split = line.split(":")
-                    if (split.size < 2) {
-                        throw Exception("Invalid response : ${line}")
-                    }
-                    let key = split[0].trimAscii()
-                    let value = split[1].trimAscii()
-                    var mutilPartContentType = ""
-                    match (key) {
-                        case "Content-Type" => 
-                            mutilPartContentType = value
-                            let mpc = value.split(";")
-                            mutilPartContentMime = mpc[0].trimAscii()
-                            for (p in mpc[1..]) {
-                                match (p.indexOf("=")) {
-                                    case Some(idx) =>
-                                        let key = p[0..idx].trimAscii()
-                                        var value = p[idx+1..].trimAscii()
-                                        if (value.startsWith("\"") && value.endsWith("\"")) {
-                                            value = value[1..value.size-1]
-                                        }
-                                        match (key) {
-                                            case "boundary" => mutilPartBoundary = value
-                                            case "charset" => mutilPartCharset = value
-                                            case _ => 
-                                                logger.debug("Ignore content type : ${key}")
-                                        }
-                                    case None =>
-                                        continue
-                                }
-                                let kv = p.split("=")
-                                if (kv.size < 2) {
-                                    continue
-                                }
-                            }
-                        case "Content-Transfer-Encoding" => mutilPartContentTransferEncoding = value
-                        case _ => 
-                            mutilPartHeaders.append((key, value))
-                    }
-                }
-                if (hasBreak) {
-                    break
-                }
-                if (hasContinue) {
-                    continue
-                }
-                var content = ""
-                while(true) {
-                    line = lines.next().getOrThrow()
-                    if (line.startsWith("--${boundary}")) {
-                        hasContinue = true
-                        if (line == "--${boundary}--") {
-                            hasBreak = true
-                        }
-                        if (mutilPartContentMime.contains("text/")) {
-                            if ("base64" == mutilPartContentTransferEncoding) {
-                                content = String.fromUtf8(fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow())
-                            }
-                            mimeMutilParts.append(MimeText(content, mutilPartContentMime))
-                        } else {
-                            if ("base64" == mutilPartContentTransferEncoding) {
-                                 mimeMutilParts.append(MimeFile(fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow(), mutilPartContentMime))
-                            } else {
-                                 mimeMutilParts.append(MimeFile(content.toArray(), mutilPartContentMime))
-                            }
-                        }
-                        mutilPartContentTransferEncoding = ""
-                        mutilPartHeaders = ArrayList<(String,String)>()
-                        mutilPartContentMime = ""
-                        mutilPartContentCharset = ""
-                        mutilPartBoundary = ""
-                        mutilPartCharset = ""
-                        break
-                    }
-                    content += line + "\r\n"
-                }
-                if (hasBreak) {
-                    break
-                }
-                if (hasContinue) {
-                    continue
-                }
-            }
-            return mail
-        } else {
-            var textBody = ""
-            while(let Some(line) <- lines.next()) {
-                textBody += line + "\r\n"
-            }
-            if ("base64" == contentTransferEncoding) {
-                mail.data = MimeFile(fromBase64String(textBody.trimAscii().replace("\r\n", "")).getOrThrow(), contentTypeMime)
-            } else {
-                mail.data = MimeFile(textBody.toArray(), contentTypeMime)
-            }
-            return mail
-        }
-        // text mail (or other)
-        mail.data = content
-        return mail
+        mail.data = data
+        mail
     }
 
     public func dele(msg: Int64) {
