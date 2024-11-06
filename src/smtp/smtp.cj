@@ -168,7 +168,12 @@ public class Smtp {
          writeCommand(toBase64String(data.data.toArray()))
       } else if (let Some(data) <- mailData as MimeMutilParts) {
          let boundary = randomBoundary()
-         writeCommand("Content-Type: multipart/mixed; boundary=\"${boundary}\"")
+         let mimeType = if (data.contentType == "") {
+            "multipart/mixed"
+         } else {
+            data.contentType
+         }
+         writeCommand("Content-Type: ${mimeType}; boundary=\"${boundary}\"")
          writeCommand("MIME-Version: 1.0")
          putMailAddressesSubject(from, to, subject)
          if (data.contentId != "") {
