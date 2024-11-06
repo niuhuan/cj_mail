@@ -264,13 +264,13 @@ public class Pop {
             if (!line.startsWith("--${boundary}")) {
                 throw Exception("Invalid response : ${line}")
             }
+            let mimeMutilParts = MimeMutilParts()
+            mail.data = mimeMutilParts
             // blank content
             if (line == "--${boundary}--") {
-                mail.data = MutilPartContent()
                 return mail
             }
             // children
-            let parts = ArrayList<MutilPart>()
             var mutilPartContentTransferEncoding = ""
             var mutilPartHeaders = ArrayList<(String,String)>()
             var mutilPartContentMime = ""
@@ -294,9 +294,9 @@ public class Pop {
                         }
                         // blank content
                         if (mutilPartContentMime.contains("text/")) {
-                            parts.append(MimeText("", mutilPartContentMime))
+                            mimeMutilParts.append(MimeText("", mutilPartContentMime))
                         } else {
-                            parts.append(MimeFile([], mutilPartContentMime))
+                            mimeMutilParts.append(MimeFile([], mutilPartContentMime))
                         }
                         mutilPartContentTransferEncoding = ""
                         mutilPartHeaders = ArrayList<(String,String)>()
@@ -363,12 +363,12 @@ public class Pop {
                             if ("base64" == mutilPartContentTransferEncoding) {
                                 content = String.fromUtf8(fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow())
                             }
-                            parts.append(MimeText(content, mutilPartContentMime))
+                            mimeMutilParts.append(MimeText(content, mutilPartContentMime))
                         } else {
                             if ("base64" == mutilPartContentTransferEncoding) {
-                                 parts.append(MimeFile(fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow(), mutilPartContentMime))
+                                 mimeMutilParts.append(MimeFile(fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow(), mutilPartContentMime))
                             } else {
-                                 parts.append(MimeFile(content.toArray(), mutilPartContentMime))
+                                 mimeMutilParts.append(MimeFile(content.toArray(), mutilPartContentMime))
                             }
                         }
                         mutilPartContentTransferEncoding = ""
@@ -388,7 +388,6 @@ public class Pop {
                     continue
                 }
             }
-            mail.data = parts
             return mail
         } else {
             var textBody = ""
@@ -396,9 +395,10 @@ public class Pop {
                 textBody += line + "\r\n"
             }
             if ("base64" == contentTransferEncoding) {
-                textBody = String.fromUtf8(fromBase64String(textBody).getOrThrow())
+                mail.data = MimeFile(fromBase64String(textBody.trimAscii().replace("\r\n", "")).getOrThrow(), contentTypeMime)
+            } else {
+                mail.data = MimeFile(textBody.toArray(), contentTypeMime)
             }
-            mail.data = MimeText(textBody, contentTypeMime)
             return mail
         }
         // text mail (or other)

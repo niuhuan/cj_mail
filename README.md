@@ -73,7 +73,7 @@ func mutilPartsMail(): SendMail {
    mail.mailFrom.name = "niuhuan"
    mail.mailFrom.address = "niuhuan@mail.com"
    mail.rcptTo = [MailAddress("niuhuan", "niuhuan@mail.com")]
-   let content = ArrayList<MutilPart>()
+   let content = MimeMutilParts()
    // html 渲染邮件内容
    content.append(MimeText("<h1>Hello, World!</h1>","text/html")) 
    // 增加一个附件

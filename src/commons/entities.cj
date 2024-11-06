@@ -51,18 +51,25 @@ public class Mail {
 }
 
 extend Mail <: ToString {
-   public func toString() {
+   public func toString(): String {
       let dataString = if (let Some(str) <- data as String) {
          str
       } else if (let Some(str) <- data as MimeText) {
          str.text
-      } else if (let Some(file) <- data as MutilPartContent) {
+      } else if (let Some(file) <- data as MimeFile) {
+         "MimeFile(contentType=${file.contentType}, size=${file.data.size})"
+      } else if (let Some(parts) <- data as MimeMutilParts) {
          var str = "["
-         for (part in file) {
+         for (part in parts) {
             if (let Some(text) <- part as MimeText) {
                str += "MimeText(contentType=${text.contentType}, size=${text.text.size})"
             } else if (let Some(file) <- part as MimeFile) {
                str += "MimeFile(contentType=${file.contentType}, size=${file.data.size})"
+            } else if (let Some(parts) <- part as MimeMutilParts) {
+               // todo recursive
+               str += "MimeMutilParts(contentType=${parts.contentType}, size=${parts.size})"
+            } else {
+               str += "Unknown"
             }
          }
          str += "]"
@@ -80,10 +87,8 @@ public type ReceiveMail = Mail
 public interface MailContent {
 }
 
-public interface MutilPart {
-}
 
-extend String <: MailContent  & MutilPart{
+extend String <: MailContent{
 }
 
 /*
@@ -94,7 +99,7 @@ Content-Transfer-Encoding: base64
 aGVsbG8sIHNlbmQgYnkgUHl0aG9uLi4u
 */
 @Default
-public class MimeText <: MailContent & MutilPart {
+public class MimeText <: MailContent {
      public var text: String = ""
      public var contentType: String = ""
 
@@ -106,7 +111,7 @@ public class MimeText <: MailContent & MutilPart {
 
 
 @Default
-public class MimeFile <: MutilPart {
+public class MimeFile <: MailContent {
      public var data: Array<Byte> = []
      public var contentType: String = ""
      public var headers: ArrayList<(String, String)> = ArrayList()
@@ -127,7 +132,25 @@ public class MimeFile <: MutilPart {
      }
 }
 
-extend ArrayList<MutilPart> <: MailContent {
-}
+@Default
+public class MimeMutilParts <: Collection<MailContent> & MailContent {
+   public var contentType: String = ""
+   public var headers: ArrayList<(String, String)> = ArrayList()
+   public var parts: ArrayList<MailContent> = ArrayList()
 
-public type MutilPartContent = ArrayList<MutilPart>
+   public func iterator() : Iterator<MailContent> {
+      parts.iterator()
+   }
+
+   public prop size: Int64 {
+        get() { parts.size }
+   }
+
+   public func isEmpty(): Bool {
+      parts.isEmpty()
+   }
+
+   public func append(part: MailContent) {
+      parts.append(part)
+   }
+}

@@ -154,7 +154,7 @@ public class Smtp {
          writeCommand("Content-Transfer-Encoding: base64")
          writeCommand("")
          writeCommand(toBase64String(data.text.toArray()))
-      } else if (let Some(data) <- mail.data as MutilPartContent) {
+      } else if (let Some(data) <- mail.data as MimeMutilParts) {
          let boundary = randomBoundary()
          writeCommand("Content-Type: multipart/mixed; boundary=\"${boundary}\"")
          writeCommand("MIME-Version: 1.0")
