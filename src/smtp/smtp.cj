@@ -127,17 +127,16 @@ public class Smtp {
       }
       writeCommand("DATA")
       readCommand()
-      putMailData(mail)
+      putMailData(mail.mailFrom, mail.rcptTo, mail.subject, mail.data)
       writeCommand(".")
       writeCommand("")
       readCommand()
    }
 
 
-   private func putMailData(mail: SendMail) {
-      if (let Some(data) <- mail.data as String) {
-         putMailAddresses(mail)
-         putMailSubject(mail)
+   private func putMailData(from: Option<MailAddress>, to: ArrayList<MailAddress>, subject: String, mailData: MailContent): Unit {
+      if (let Some(data) <- mailData as String) {
+         putMailAddressesSubject(from, to, subject)
          writeCommand("")
          for (line in data.split("\n")) {
             if (line == ".") {
@@ -146,42 +145,39 @@ public class Smtp {
                writeCommand(line)
             }   
          }
-      } else if (let Some(data) <- mail.data as MimeText) {
-         putMailAddresses(mail)
-         putMailSubject(mail)
+      } else if (let Some(data) <- mailData as MimeText) {
+         putMailAddressesSubject(from, to, subject)
          writeCommand("Content-Type: ${data.contentType}; charset=\"UTF-8\"")
          writeCommand("MIME-Version: 1.0")
          writeCommand("Content-Transfer-Encoding: base64")
+         if (data.contentId != "") {
+            writeCommand("Content-ID: <${data.contentId}>")
+         }
          writeCommand("")
          writeCommand(toBase64String(data.text.toArray()))
-      } else if (let Some(data) <- mail.data as MimeMutilParts) {
+      } else if (let Some(data) <- mailData as MimeFile) {
+         putMailAddressesSubject(from, to, subject)
+         writeCommand("Content-Type: ${data.contentType}; name=\"${data.contentType}\"")
+         writeCommand("Content-Disposition: attachment; filename=\"${data.fileName}\"")
+         writeCommand("MIME-Version: 1.0")
+         writeCommand("Content-Transfer-Encoding: base64")
+         if (data.contentId != "") {
+            writeCommand("Content-ID: <${data.contentId}>")
+         }
+         writeCommand("")
+         writeCommand(toBase64String(data.data.toArray()))
+      } else if (let Some(data) <- mailData as MimeMutilParts) {
          let boundary = randomBoundary()
          writeCommand("Content-Type: multipart/mixed; boundary=\"${boundary}\"")
          writeCommand("MIME-Version: 1.0")
-         putMailAddresses(mail)
-         putMailSubject(mail)
+         putMailAddressesSubject(from, to, subject)
+         if (data.contentId != "") {
+            writeCommand("Content-ID: <${data.contentId}>")
+         }
          for (part in data) {
             writeCommand("")
             writeCommand("--${boundary}")
-            if (let Some(part) <- part as String) {
-               writeCommand("Content-Type: text/plain; charset=\"UTF-8\"")
-               writeCommand("Content-Transfer-Encoding: base64")
-               writeCommand("")
-               writeCommand(toBase64String(part.toArray()))
-            } else if (let Some(part) <- part as MimeText) {
-               writeCommand("Content-Type: ${part.contentType}; charset=\"UTF-8\"")
-               writeCommand("Content-Transfer-Encoding: base64")
-               writeCommand("")
-               writeCommand(toBase64String(part.text.toArray()))
-            } else if (let Some(part) <- part as MimeFile) {
-               writeCommand("Content-Type: ${part.contentType}")
-               writeCommand("Content-Transfer-Encoding: base64")
-               for (header in part.headers) {
-                  writeCommand("${header[0]}: ${header[1]}")
-               }
-               writeCommand("")
-               writeCommand(toBase64String(part.data))
-            }
+            putMailData(None, ArrayList<MailAddress>(), "", part)
          }
          writeCommand("")
          writeCommand("--${boundary}--")
@@ -203,22 +199,24 @@ public class Smtp {
       String(str.toArray())
    }
 
-   private func putMailSubject(mail: SendMail) {
-      if (mail.subject != "") {
-         writeCommand("Subject: ${mail.subject}")
-      }
-   }
 
-   private func putMailAddresses(mail: SendMail) {
-      writeCommand("From: ${mail.mailFrom.toString()}")
-      var to = ""
-      for (rcpt in mail.rcptTo) {
-         if (to != "") {
-            to += ", "
-         }
-         to += rcpt.toString()
+   private func putMailAddressesSubject(from: Option<MailAddress>, rcptTo: ArrayList<MailAddress>, subject: String) {
+      if (from.isSome()) {
+         writeCommand("From: ${from.getOrThrow().toString()}")
       }
-      writeCommand("To: ${to}")
+      if (rcptTo.size > 0) {
+         var to = ""
+         for (rcpt in rcptTo) {
+            if (to != "") {
+               to += ", "
+            }
+            to += rcpt.toString()
+         }
+         writeCommand("To: ${to}")
+      }
+      if (subject != "") {
+         writeCommand("Subject: ${subject}")
+      }
    }
 
    public func quit() {

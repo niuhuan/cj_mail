@@ -117,6 +117,7 @@ public class MimeFile <: MailContent {
      public var data: Array<Byte> = []
      public var contentId: String = ""
      public var contentType: String = ""
+     public var fileName: String = ""
      public var headers: ArrayList<(String, String)> = ArrayList()
 
      public init(data: Array<Byte>, contentType: String) {
@@ -187,13 +188,23 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
             case "From" => from = value
             case "To" => to = value
             case "Subject" => subject = value
-            case "Content-Id" => contentId = value
+            case "Content-ID" => contentId = value
             case "Content-Type" => contentType = value
             case "Content-Transfer-Encoding" => contentTransferEncoding = value
             case _ => 
                   headers.append((key, value))
       }
    }
+   // fix
+   // "=?{charset}?{encoding}?{encoded_text}?="
+   if (subject.startsWith("=?utf-8?b?") && subject.endsWith("?=")) {
+      let encoded = subject[10..subject.size-2]
+      subject = String.fromUtf8(fromBase64String(encoded.trimAscii().replace("\r\n", "")).getOrThrow())
+   }
+   if (contentId.startsWith("<") && contentId.endsWith(">")) {
+      contentId = contentId[1..contentId.size-1]
+   }
+   // todo ?q? quopri
    // parse mime
    let parts = contentType.split(";")
    let contentTypeMime = parts[0].trimAscii()

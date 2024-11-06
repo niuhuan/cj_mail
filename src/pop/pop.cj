@@ -190,12 +190,6 @@ public class Pop {
             mail.rcptTo = parseMailAddresses(to)
         }
         mail.subject = subject
-        // "=?{charset}?{encoding}?{encoded_text}?="
-        if (mail.subject.startsWith("=?utf-8?b?") && mail.subject.endsWith("?=")) {
-            let encoded = mail.subject[10..mail.subject.size-2]
-            mail.subject = String.fromUtf8(fromBase64String(encoded.trimAscii().replace("\r\n", "")).getOrThrow())
-        }
-        // todo ?q? quopri
         mail.data = data
         mail
     }
