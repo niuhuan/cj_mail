@@ -32,7 +32,7 @@ public class Smtp {
 
    private func writeCommand(command: String) {
       let writer = this.writer.getOrThrow()
-      logger.debug("C: ${command}")
+      logger.trace("C: ${command}")
       writer.write(command)
       writer.write("\r\n")
       writer.flush()
@@ -43,7 +43,7 @@ public class Smtp {
       let reader = this.reader.getOrThrow()
       while (true) {
          var line = reader.readln().getOrThrow()
-         logger.debug("S: ${line}")
+         logger.trace("S: ${line}")
          match (responseBaseRegex.matches(line)) {
             case Some(r) =>
                let code = Int64.parse(r.matchStr(1))

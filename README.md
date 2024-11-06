@@ -99,6 +99,7 @@ main() : Int64{
     let(_, mails) = pop.list()
     let mail = mails[0][0]
     pop.retr(mail)  // 读取邮件内容
+    // pop.retrParse(mail)  // 读取邮件内容, 并parse成mail对象, 使用参考 src/commons/entities.cj中的toString
     pop.quit()
     pop.disconnect()
     0
