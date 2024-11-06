@@ -43,8 +43,8 @@ public class Smtp {
       writer.flush()
    }
 
-   private func readCommand() : ServerResponse {
-      let serverResponse = ServerResponse()
+   private func readCommand() : SmtpResponse {
+      let serverResponse = SmtpResponse()
       let reader = this.reader.getOrThrow()
       while (true) {
          var line = reader.readln().getOrThrow()
@@ -68,7 +68,7 @@ public class Smtp {
                      // 250 OK
                      // 334 VXNlcm5hbWU6
                      // 354 Start mail input; end with <CRLF>.<CRLF>
-                     throw ServerException(serverResponse)
+                     throw SmtpException(serverResponse)
                   }
                   return serverResponse
                }

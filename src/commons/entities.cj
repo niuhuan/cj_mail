@@ -5,19 +5,6 @@ import std.collection.*
 let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
 
 @Default
-@ToString
-public class ServerResponse {
-   public var code: Int64
-   public var message: String
-}
-
-@AllArgsConstructor
-@ToString
-public class ServerException <: Exception {
-   public var serverResponse: ServerResponse
-}
-
-@Default
 @AllArgsConstructor
 public class MailAddress <: ToString {
    public var name: String
