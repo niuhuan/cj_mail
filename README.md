@@ -33,6 +33,7 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `STAT` 获取邮件数
     - [x] `LIST` 列出邮件
     - [x] `RETR` 读取邮件
+    - [x] `DELE` 删除邮件
     - [ ] parse邮件使得可读性更好
 
 ## 🔖 用例

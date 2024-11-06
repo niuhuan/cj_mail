@@ -44,6 +44,16 @@ public class Pop {
       readCommand() // Server Hello
    }
 
+    public func noop() {
+        writeCommand("NOOP")
+        readCommand()
+    }
+
+    public func rest() {
+        writeCommand("RSET")
+        readCommand()
+    }
+
     public func readCommand(): String {
         let reader = this.reader.getOrThrow()
         let line = reader.readln().getOrThrow()
@@ -163,6 +173,11 @@ public class Pop {
             content += line + "\n"
         }
         (size, content)
+    }
+
+    public func dele(msg: Int64) {
+        writeCommand("DELE ${msg}")
+        readCommand()
     }
 
    public func quit() {
