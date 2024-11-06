@@ -34,7 +34,7 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `LIST` 列出邮件
     - [x] `RETR` 读取邮件
     - [x] `DELE` 删除邮件
-    - [ ] parse邮件使得可读性更好
+    - [x] parse邮件使得可读性更好
 
 ## 🔖 用例
 
@@ -112,7 +112,9 @@ main() : Int64{
 
 #### 计划中的特性
 
-- [ ] POP/IMAP
+- [ ] POP 支持
+- [ ] IMAP
+- [ ] [Subtypes for rfc1341](https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html) 以及嵌套 alternative
 
 ## 📕 协议
 
