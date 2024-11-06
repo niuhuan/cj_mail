@@ -96,10 +96,13 @@ main() : Int64{
     pop.tlsPort = 995
     pop.connect()  
     pop.auth("niuhuan@mail.com", "password")
-    let(count, mails) = pop.list()  // let (邮件数量, ArrayList<(邮件编号,邮件大小)>) = pop.list()
+    // let (邮件数量, ArrayList<(邮件编号,邮件大小)>) = pop.list()
+    let(count, mails) = pop.list()  
     let mailIndex = mails[0][0]
-    let mail = pop.retrParse(mail)  // 读取邮件内容, 并parse成mail对象, 使用参考 src/commons/entities.cj中的toString
-    let(size,text) = pop.retr(mailIndex)  // 读取邮件内容
+    // 读取邮件内容, 并parse成mail对象, 使用参考 src/commons/entities.cj中的toStringQ
+    let mail = pop.retrParse(mailIndex) 
+    // 读取邮件内容 
+    let(size,text) = pop.retr(mailIndex) 
     pop.quit()
     pop.disconnect()
     0
