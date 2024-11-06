@@ -18,13 +18,26 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 
 ## 📖 特性
 
+| 传输协议 | 详情 |
+| -- | -- |
+| SMTP | https://datatracker.ietf.org/doc/html/rfc5321 |
+| POP | https://datatracker.ietf.org/doc/html/rfc1939 |
+
 - [x] SMTP
     - [x] 基础认证
     - [x] LOGIN认证
     - [x] 发送文本/html邮件
     - [x] 发送附件
+- [x] POP
+    - [x] 基础认证
+    - [x] `STAT` 获取邮件数
+    - [x] `LIST` 列出邮件
+    - [x] `RETR` 读取邮件
+    - [ ] parse邮件使得可读性更好
 
 ## 🔖 用例
+
+### SMTP
 
 ```cangjie
 import cj_mail.*
@@ -38,8 +51,8 @@ main(): Int64 {
    smtp.plain("niuhuan@mail.com", "mailPassword")    // 基础认证
    // smtp.login("niuhuan@mail.com", "mailPassword") // LOGIN认证
    smtp.send(textMail())
-   // smtp.quit() // 我的服务器不支持quit命令, 所以将quit和close分开
-   smtp.close()
+   // smtp.quit() // 我的服务器不支持quit命令, 所以将quit和disconnect分开
+   smtp.disconnect()
    return 0
 }
 
@@ -70,6 +83,24 @@ func mutilPartsMail(): SendMail {
    ))
    mail.data = content
    mail
+}
+```
+
+### POP
+
+```cangjie
+main() : Int64{
+    let pop = Pop()
+    pop.host = "pop3.mail.com"  
+    pop.tlsPort = 995
+    pop.connect()  
+    pop.auth("niuhuan@mail.com", "password")
+    let(_, mails) = pop.list()
+    let mail = mails[0][0]
+    pop.retr(mail)  // 读取邮件内容
+    pop.quit()
+    pop.disconnect()
+    0
 }
 ```
 

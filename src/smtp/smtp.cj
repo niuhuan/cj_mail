@@ -226,7 +226,7 @@ public class Smtp {
       readCommand()
    }
 
-   public func close() {
+   public func disconnect() {
          tlsTlsSocket.getOrThrow().close()
    }
 }

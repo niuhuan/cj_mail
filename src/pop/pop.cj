@@ -3,9 +3,23 @@ package cj_mail.pop
 
 import net.tls.*
 import std.socket.*
+import std.collection.*
 import std.io.*
+import cj_lombok.*
+import std.regex.*
+import log.*
+
+let popStatePattern = Regex("^\\+OK (\\d+) (\\d+)$")
+
+@AllArgsConstructor
+public class PopException <: Exception {
+    public var serverResponse: String
+}
 
 public class Pop {
+
+    let logger = getGlobalLogger(("cj_mail", "Pop"))
+
     public var host: String =  ""
     public var tlsPort: UInt16 = 995
 
@@ -27,14 +41,137 @@ public class Pop {
       lastSession = tls.session
       reader = StringReader(tls)
       writer = StringWriter(tls)
-      readAll()
+      readCommand() // Server Hello
    }
 
-    public func readAll() {
+    public func readCommand(): String {
         let reader = this.reader.getOrThrow()
-        while (true) {
-            let line = reader.readln().getOrThrow()
-            println("line: ${line})")
+        let line = reader.readln().getOrThrow()
+        logger.debug("S: ${line}")
+        if (line.startsWith("-ERR")) {
+            throw PopException(line)
+        }
+        line
+    }
+
+   public func writeCommand(command: String) {
+        let writer = this.writer.getOrThrow()
+        logger.debug("C: ${command}")
+        writer.write(command)
+        writer.write("\r\n")
+        writer.flush()
+    }
+
+    public func apop(username: String, password: String) {
+        writeCommand("APOP ${username} ${password}")
+        readCommand()
+    }
+
+    public func user(username: String) {
+        writeCommand("USER ${username}")
+        readCommand()
+    }
+
+    public func pass(password: String) {
+        writeCommand("PASS ${password}")
+        readCommand()
+    }
+
+    public func auth(username: String, password: String) {
+        user(username)
+        pass(password)
+    }
+
+    public func stat(): Int64 {
+        writeCommand("STAT")
+        let line = readCommand()
+        match (popStatePattern.matches(line)) {
+            case Some(r) =>
+                let count = Int64.parse(r.matchStr(1))
+                count
+            case None =>
+                throw Exception("Invalid response")
         }
     }
+
+    /*
+             Examples:
+             C: LIST
+             S: +OK 2 messages (320 octets)
+             S: 1 120
+             S: 2 200
+             S: .
+               ...
+             C: LIST 2
+             S: +OK 2 200
+               ...
+             C: LIST 3
+             S: -ERR no such message, only 2 messages in maildrop
+    */
+
+    public func list() :(Int64, ArrayList<(Int64, Int64)>) {
+        writeCommand("LIST")
+        let line = readCommand()
+        if (!line.startsWith("+OK")) {
+            throw Exception("Invalid response : ${line}")
+        }
+        let parts = line.split(" ")
+        let count = Int64.parse(parts[1])
+        let mails = ArrayList<(Int64, Int64)>()
+        while (true) {
+            let line = readCommand()
+            if (line == ".") {
+                break
+            }
+            let parts = line.split(" ")
+            if (parts.size < 2) {
+                throw Exception("Invalid response")
+            }
+            let msg = Int64.parse(parts[0])
+            let size = Int64.parse(parts[1])
+            mails.append((msg, size))
+        }
+        (count, mails)
+    }
+
+    public func list(msg: Int64) : (Int64, Int64) {
+        writeCommand("LIST ${msg}")
+        let response = readCommand()
+        let parts = response.split(" ")
+        if (parts.size < 2) {
+            throw Exception("Invalid response")
+        }
+        let idx = Int64.parse(parts[0])
+        let size = Int64.parse(parts[1])
+        (idx, size)
+    }
+
+    public func retr(msg : Int64) : (Int64, String) {
+        writeCommand("RETR ${msg}")
+        let lien = readCommand()
+        let split = lien.split(" ")
+        if (split.size < 2) {
+            throw Exception("Invalid response")
+        }
+        let size = Int64.parse(split[1])
+        var content = ""
+        while (true) {
+            let line = readCommand()
+            if (line == ".") {
+                break
+            }
+            content += line + "\n"
+        }
+        (size, content)
+    }
+
+   public func quit() {
+      writeCommand("QUIT")
+      readCommand()
+   }
+
+   public func disconnect() {
+         tlsTlsSocket.getOrThrow().close()
+   }
+    
 }
