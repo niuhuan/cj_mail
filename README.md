@@ -112,7 +112,6 @@ main() : Int64{
 
 #### 计划中的特性
 
-- [ ] POP 支持
 - [ ] IMAP
 - [ ] [Subtypes for rfc1341](https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html) 以及嵌套 alternative
 
