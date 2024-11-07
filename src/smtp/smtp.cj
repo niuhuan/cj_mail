@@ -21,17 +21,13 @@ public class Smtp {
    public var tlsPort: UInt16 = 587
 
    public var authTypes: Array<String> = []
-
-   private var lastSession: ?TlsSession = None
-   private var tlsTlsSocket: ?TlsSocket = None
-   private var reader: ?StringReader<IOStream> = None
-   private var writer: ?StringWriter<IOStream> = None
+   public var connection: ?MailConnection = None
 
    public init(){
    }
 
    private func writeCommand(command: String) {
-      let writer = this.writer.getOrThrow({=>MailConnectExcption("Not connected")})
+      let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
       logger.trace("C: ${command}")
       writer.write(command)
       writer.write("\r\n")
@@ -39,7 +35,7 @@ public class Smtp {
    }
 
    private func readCommand() : SmtpResponse {
-      let reader = this.reader.getOrThrow({=>MailConnectExcption("Not connected")})
+      let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
       let serverResponse = SmtpResponse()
       while (true) {
          var line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
@@ -82,12 +78,9 @@ public class Smtp {
       var config = TlsClientConfig()
       config.verifyMode = TrustAll
       config.alpnProtocolsList = ["h2"]
-      let tls = TlsSocket.client(socket, clientConfig: config, session: lastSession)
-      this.tlsTlsSocket = Some(tls)
+      let tls = TlsSocket.client(socket, clientConfig: config)
       tls.handshake()
-      lastSession = tls.session
-      reader = StringReader(tls)
-      writer = StringWriter(tls)
+      this.connection = MailConnection(tls)
       // init smtp
       readCommand() // Server Hello
       writeCommand("EHLO ${host}")
@@ -231,6 +224,6 @@ public class Smtp {
    }
 
    public func disconnect() {
-         tlsTlsSocket.getOrThrow({=>MailConnectExcption("Not connected")}).close()
+         connection.getOrThrow({=>MailConnectExcption("Not connected")}).disconnect()
    }
 }
