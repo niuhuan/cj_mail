@@ -34,3 +34,24 @@ public class MailConnection {
         reader.readln()
     }
 }
+
+public func defaultTlsConnect(host: String, port: UInt16): MailConnection {
+      let socket = TcpSocket(host, port)
+      socket.connect()
+      let tls = try {
+        var config = TlsClientConfig()
+        config.verifyMode = TrustAll
+        config.alpnProtocolsList = ["h2"]
+        TlsSocket.client(socket, clientConfig: config)
+      } catch (e: Exception) {
+        socket.close()
+        throw e
+      }
+      try {
+          tls.handshake()
+      }catch (e: Exception) {
+        tls.close()
+        throw e
+      }
+      MailConnection(tls)
+}

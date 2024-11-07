@@ -22,6 +22,7 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 | -- | -- |
 | SMTP | https://datatracker.ietf.org/doc/html/rfc5321 |
 | POP | https://datatracker.ietf.org/doc/html/rfc1939 |
+| IMAP | https://datatracker.ietf.org/doc/rfc3501 |
 
 - [x] SMTP
     - [x] 基础认证
@@ -35,6 +36,9 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `RETR` 读取邮件
     - [x] `DELE` 删除邮件
     - [x] parse邮件使得可读性更好
+- [ ] IMAP
+    - [x] `LOGIN` 登录
+    - [x] `SELECT` 获取收件箱邮件数量
 
 ## 🔖 用例
 

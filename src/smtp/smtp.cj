@@ -72,15 +72,7 @@ public class Smtp {
    }
 
    public func connect() {
-      // init tls
-      let socket = TcpSocket(host, tlsPort)
-      socket.connect()
-      var config = TlsClientConfig()
-      config.verifyMode = TrustAll
-      config.alpnProtocolsList = ["h2"]
-      let tls = TlsSocket.client(socket, clientConfig: config)
-      tls.handshake()
-      this.connection = MailConnection(tls)
+      this.connection =defaultTlsConnect(host, tlsPort)
       // init smtp
       readCommand() // Server Hello
       writeCommand("EHLO ${host}")

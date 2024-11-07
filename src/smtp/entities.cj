@@ -6,6 +6,7 @@ import cj_mail.commons.*
 
 @Default
 @ToString
+@AllArgsConstructor
 public class SmtpResponse {
    public var code: Int64
    public var message: String
@@ -14,5 +15,5 @@ public class SmtpResponse {
 @AllArgsConstructor
 @ToString
 public class SmtpException <: MailException {
-   public var serverResponse: SmtpResponse
+   public var response: SmtpResponse
 }
