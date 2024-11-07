@@ -57,8 +57,8 @@ public class Pop {
     }
 
     public func readCommand(): String {
-        let reader = this.reader.getOrThrow()
-        let line = reader.readln().getOrThrow()
+        let reader = this.reader.getOrThrow({=>MailConnectExcption("Not connected")})
+        let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
         logger.trace("S: ${line}")
         if (line.startsWith("-ERR")) {
             throw PopException(line)
@@ -67,7 +67,7 @@ public class Pop {
     }
 
    public func writeCommand(command: String) {
-        let writer = this.writer.getOrThrow()
+        let writer = this.writer.getOrThrow({=>MailConnectExcption("Not connected")})
         logger.trace("C: ${command}")
         writer.write(command)
         writer.write("\r\n")
@@ -205,7 +205,7 @@ public class Pop {
    }
 
    public func disconnect() {
-         tlsTlsSocket.getOrThrow().close()
+         tlsTlsSocket.getOrThrow({=>MailConnectExcption("Not connected")}).close()
    }
     
 }

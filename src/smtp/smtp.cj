@@ -31,7 +31,7 @@ public class Smtp {
    }
 
    private func writeCommand(command: String) {
-      let writer = this.writer.getOrThrow()
+      let writer = this.writer.getOrThrow({=>MailConnectExcption("Not connected")})
       logger.trace("C: ${command}")
       writer.write(command)
       writer.write("\r\n")
@@ -39,10 +39,10 @@ public class Smtp {
    }
 
    private func readCommand() : SmtpResponse {
+      let reader = this.reader.getOrThrow({=>MailConnectExcption("Not connected")})
       let serverResponse = SmtpResponse()
-      let reader = this.reader.getOrThrow()
       while (true) {
-         var line = reader.readln().getOrThrow()
+         var line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
          logger.trace("S: ${line}")
          match (responseBaseRegex.matches(line)) {
             case Some(r) =>
@@ -52,7 +52,7 @@ public class Smtp {
                if (serverResponse.code == 0) {
                   serverResponse.code = code
                } else if (serverResponse.code != code) {
-                  throw  Exception("Invalid response code")
+                  throw  MailContentParseException("Inconsistent code", line)
                }
                if (serverResponse.message != "") {
                   serverResponse.message += "\n"
@@ -68,10 +68,11 @@ public class Smtp {
                   return serverResponse
                }
             case None =>
-               throw Exception("Invalid response")
+               throw MailContentParseException("Invalid response", line)
          }
       }
-      throw Exception("Invalid response")
+      // should not reach here
+      throw MailContentParseException("Invalid response")
    }
 
    public func connect() {
@@ -230,6 +231,6 @@ public class Smtp {
    }
 
    public func disconnect() {
-         tlsTlsSocket.getOrThrow().close()
+         tlsTlsSocket.getOrThrow({=>MailConnectExcption("Not connected")}).close()
    }
 }

@@ -39,3 +39,19 @@ public class MailContentParseException <: MailException & ToString{
         "MailContentParseException: ${message} (${line})"
     }
 }
+
+public class MailConnectExcption <: MailException & ToString {
+
+    public init() {
+        super()
+    }
+
+    public init(message: String) {
+        super(message)
+    }
+
+    public override func toString(): String {
+        "MailConnectExcption(${message})"
+    }
+
+}
