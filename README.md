@@ -18,11 +18,11 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 
 ## 📖 特性
 
-| 传输协议 | 详情 |
-| -- | -- |
-| SMTP | https://datatracker.ietf.org/doc/html/rfc5321 |
-| POP | https://datatracker.ietf.org/doc/html/rfc1939 |
-| IMAP | https://datatracker.ietf.org/doc/rfc3501 |
+| 传输协议 | 详情 | 详情 |
+| -- | -- | -- |
+| SMTP | https://datatracker.ietf.org/doc/html/rfc5321 | https://www.rfc-editor.org/rfc/rfc5321 |
+| POP | https://datatracker.ietf.org/doc/html/rfc1939 | https://www.rfc-editor.org/rfc/rfc1939 |
+| IMAP | https://datatracker.ietf.org/doc/rfc3501 | https://www.rfc-editor.org/rfc/rfc3501 |
 
 - [x] SMTP
     - [x] 基础认证
@@ -39,6 +39,7 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 - [ ] IMAP
     - [x] `LOGIN` 登录
     - [x] `SELECT` 获取收件箱邮件数量
+    - [x] `SEARCH` 搜索邮件、返回UID列表
 
 ## 🔖 用例
 

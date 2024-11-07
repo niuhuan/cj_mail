@@ -33,6 +33,11 @@ public class MailConnection {
     public func readln(): ?String {
         reader.readln()
     }
+
+    public func read(): ?Rune {
+        reader.read()
+    }
+
 }
 
 public func defaultTlsConnect(host: String, port: UInt16): MailConnection {

@@ -6,6 +6,8 @@ import net.tls.*
 import std.socket.*
 import cj_lombok.*
 import std.regex.*
+import std.io.*
+import std.collection.*
 
 @AllArgsConstructor
 @ToString
@@ -13,7 +15,6 @@ import std.regex.*
 public class ImapException <: MailException {
    public var response: String
 }
-
 
 public class Imap {
 
@@ -50,6 +51,22 @@ public class Imap {
                     builder.append(line)
                     builder.append("\r\n")
                     if (line.startsWith("* ")) {
+                        if (line.endsWith("}")) {
+                             let regex = Regex("^\\* \\d+ FETCH [\\S\\s]+ \\{(\\d+)\\}$")
+                             let matcher = regex.matcher(line);
+                             match(matcher.find()) {
+                                    case Some(s) =>
+                                        let len = Int64.parse(s.matchStr(1))
+                                        logger.trace(".. for read Rune * ${len} from server ..")
+                                        for (_ in 0..len) {
+                                            builder.append(reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")}))
+                                        }
+                                        let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+                                        logger.trace(".. line left : ${line} ..")
+                                        builder.append(line)
+                                    case None => ()
+                             }
+                        }
                         continue
                     } else if (line.startsWith("${cmdIdx} ")) {
                         if (line.startsWith("${cmdIdx} OK ")) {
@@ -116,6 +133,40 @@ public class Imap {
                 0
         }
         MailboxState(exists, recent)
+    }
+
+    public func search(criteria: String): ArrayList<Int64> {
+        let idx = nextCmdIdx();
+        var command = "${idx} SEARCH \"${escapingDoubleQuote(criteria)}\""
+        writeCommand(command)
+        let result = ArrayList<Int64>();
+        for(line in  readCommand(idx).split("\r\n")) {
+            if (line.startsWith("* SEARCH ")) {
+                for (str in line.split(" ")[2..]) {
+                    if (str != "*") {
+                        result.append(Int64.parse(str))
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    public func fetch(sequenceSet: String, dataItems: String) {
+        let idx = nextCmdIdx();
+        var command = "${idx} FETCH ${sequenceSet} ${dataItems}"
+        writeCommand(command)
+        readCommand(idx)
+    }
+
+    public func list(referenceName: String, mailboxName: String): String {
+        let idx = nextCmdIdx();
+        writeCommand("${idx} LIST \"${escapingDoubleQuote(referenceName)}\" \"${escapingDoubleQuote(mailboxName)}\"")
+        readCommand(idx)
+    }
+
+    private func escapingDoubleQuote(str: String): String {
+        str.replace("\"", "\\\"")
     }
 
 }
