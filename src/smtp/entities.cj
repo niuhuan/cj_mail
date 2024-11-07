@@ -13,6 +13,6 @@ public class SmtpResponse {
 
 @AllArgsConstructor
 @ToString
-public class SmtpException <: Exception {
+public class SmtpException <: MailException {
    public var serverResponse: SmtpResponse
 }

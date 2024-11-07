@@ -7,6 +7,7 @@ import encoding.base64.*
 import log.*
 
 let logger = getGlobalLogger(("cj_mail", "Parser"))
+let mailAddressPattern = Regex("^(.*)?<(.*)>$")
 
 @Default
 @AllArgsConstructor
@@ -18,8 +19,6 @@ public class MailAddress <: ToString {
       "${name}<${address}>"
    }
 }
-
-let mailAddressPattern = Regex("^(.*)?<(.*)>$")
 
 public func parseMailAddress(address: String): MailAddress {
    match (mailAddressPattern.matches(address)) {
@@ -172,15 +171,15 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
    // read header
    let lines = content.lazySplit("\r\n")
    while(true){
-      let line = lines.next().getOrThrow()
+      let line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
       if (line == "") {
             break
       } else if (!line.contains(":")) {
-            throw Exception("Invalid response : ${line}")
+            throw MailContentParseException("Missing colon in mail content header", line)
       }
-      let parts = line.split(":")
+      let parts = line.split(":", 2, removeEmpty: true)
       if (parts.size < 2) {
-            throw Exception("Invalid response : ${line}")
+            throw MailContentParseException("Missing colon in mail content header value", line)
       }
       let key = parts[0].trimAscii()
       let value = parts[1].trimAscii()
@@ -199,7 +198,7 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
    // "=?{charset}?{encoding}?{encoded_text}?="
    if (subject.startsWith("=?utf-8?b?") && subject.endsWith("?=")) {
       let encoded = subject[10..subject.size-2]
-      subject = String.fromUtf8(fromBase64String(encoded.trimAscii().replace("\r\n", "")).getOrThrow())
+      subject = String.fromUtf8(parseBase64MailContent(encoded))
    }
    if (contentId.startsWith("<") && contentId.endsWith(">")) {
       contentId = contentId[1..contentId.size-1]
@@ -235,14 +234,14 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
             textBody += line + "\r\n"
       }
       if ("base64" == contentTransferEncoding) {
-            textBody = String.fromUtf8(fromBase64String(textBody.trimAscii().replace("\r\n", "")).getOrThrow())
+            textBody = String.fromUtf8(parseBase64MailContent(textBody))
       }
       return (from, to, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
-      var line =  lines.next().getOrThrow()
+      var line =  lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
       // first boundary
       if (!line.startsWith("--${boundary}")) {
-            throw Exception("Invalid response : ${line}")
+            throw MailContentParseException("Missing mail boundary", line)
       }
       let mimeMutilParts = MimeMutilParts()
       mimeMutilParts.contentType = contentTypeMime
@@ -255,7 +254,7 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
       // children
       var builder = StringBuilder()
       while(true) {
-            line = lines.next().getOrThrow()
+            line = lines.next().getOrThrow({=> MailContentParseException("The email content ended prematurely")})
             if (line.startsWith("--${boundary}")) {
                let (_, _, _, data) = parseMailContent(builder.toString())
                mimeMutilParts.append(data)
@@ -277,7 +276,7 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
             textBody += line + "\r\n"
       }
       let file = if ("base64" == contentTransferEncoding) {
-            MimeFile(fromBase64String(textBody.trimAscii().replace("\r\n", "")).getOrThrow(), contentTypeMime)
+            MimeFile(parseBase64MailContent(textBody), contentTypeMime)
       } else {
             MimeFile(textBody.toArray(), contentTypeMime)
       }
@@ -285,5 +284,9 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
       file.contentId = contentId
       return (from, to, subject, file)
    }
+}
+
+func parseBase64MailContent(content: String): Array<Byte> {
+   fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow({=>MailContentParseException("Invalid base64 content", content)})
 }
 
