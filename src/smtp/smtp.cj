@@ -187,7 +187,8 @@ public class Smtp {
          idx = idx % chars.size
          str.append(Rune((chars[idx])))
       }
-      String(str.toArray())
+      let res = String(str.toArray())
+      "===============${res}=="
    }
 
 

@@ -40,6 +40,8 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `LOGIN` 登录
     - [x] `SELECT` 获取收件箱邮件数量
     - [x] `SEARCH` 搜索邮件、返回UID列表
+    - [x] `FETCH` 获取邮件内容
+    - [x]  `fetchAndParse` 获取邮件内容并解析
 
 ## 🔖 用例
 
@@ -114,13 +116,36 @@ main() : Int64{
 }
 ```
 
+### IMAP
+
+```cangjie
+main(): Int64 {
+    let imap = Imap()
+    imap.host = "imap.mail.com"  
+    imap.tlsPort = 993
+    imap.connect()
+    imap.login("niuhuan@mail.com", "password")
+    imap.select("INBOX")
+    // 查询邮件, 或者下载邮件
+    let mails = imap.fetch("1:10", "FULL")
+    // 下载邮件并解析
+    let mails = imap.fetchAndParse("1:10")
+    for ((uid, mail) in mails) { 
+        println("uid : ${uid}, mail : ${mail}")
+    }
+    0
+}
+```
+
 ## 🏆 贡献
 
 欢迎您的issue和pull request, fork时请保留源仓库地址
 
 #### 计划中的特性
 
-- [ ] IMAP
+- [ ] `Cc`
+- [ ] 附件输入流的方式读取
+- [ ] IMAP 解析混合附件主要类型
 - [ ] [Subtypes for rfc1341](https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html) 以及嵌套 alternative
 
 ## 📕 协议

@@ -160,7 +160,7 @@ public class MimeMutilParts <: Collection<MailContent> & MailContent {
 }
 
 
-public func parseMailContent(content: String) : (String, String, String, MailContent) {
+public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (String, String, String, MailContent) {
    var from = ""
    var to = ""
    var subject = ""
@@ -175,6 +175,9 @@ public func parseMailContent(content: String) : (String, String, String, MailCon
       if (line == "") {
             break
       } else if (!line.contains(":")) {
+            if (noHeaderAsText) {
+               return (from, to, subject, content)
+            }
             throw MailContentParseException("Missing colon in mail content header", line)
       }
       let parts = line.split(":", 2, removeEmpty: true)
