@@ -92,21 +92,6 @@ public class Pop {
         }
     }
 
-    /*
-             Examples:
-             C: LIST
-             S: +OK 2 messages (320 octets)
-             S: 1 120
-             S: 2 200
-             S: .
-               ...
-             C: LIST 2
-             S: +OK 2 200
-               ...
-             C: LIST 3
-             S: -ERR no such message, only 2 messages in maildrop
-    */
-
     public func list() :(Int64, ArrayList<(Int64, Int64)>) {
         writeCommand("LIST")
         let line = readCommand()
@@ -166,7 +151,7 @@ public class Pop {
 
     public func retrParse(msg: Int64) : ReceiveMail {
         let (_, content) = retr(msg)
-        let (from, to, subject, data) = parseMailContent(content)
+        let (from, to, cc, bcc, subject, data) = parseMailContent(content)
         
         let mail = ReceiveMail()
         if (from != "") {
@@ -174,6 +159,12 @@ public class Pop {
         }
         if (to != "") {
             mail.rcptTo = parseMailAddresses(to)
+        }
+        if (cc != "") {
+            mail.cc = parseMailAddresses(cc)
+        }
+        if (bcc != "") {
+            mail.bcc = parseMailAddresses(bcc)
         }
         mail.subject = subject
         mail.data = data

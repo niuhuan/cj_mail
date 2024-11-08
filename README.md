@@ -27,8 +27,10 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 - [x] SMTP
     - [x] 基础认证
     - [x] LOGIN认证
-    - [x] 发送文本/html邮件
-    - [x] 发送附件
+    - [x] 发送邮件
+        - [x] 抄送 / 密送
+        - [x] 发送文本/html邮件
+        - [x] 发送附件
 - [x] POP
     - [x] 基础认证
     - [x] `STAT` 获取邮件数
@@ -36,12 +38,12 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `RETR` 读取邮件
     - [x] `DELE` 删除邮件
     - [x] parse邮件使得可读性更好
-- [ ] IMAP
+- [x] IMAP
     - [x] `LOGIN` 登录
     - [x] `SELECT` 获取收件箱邮件数量
     - [x] `SEARCH` 搜索邮件、返回UID列表
     - [x] `FETCH` 获取邮件内容
-    - [x]  `fetchAndParse` 获取邮件内容并解析
+    - [x] `fetchParse` 获取邮件内容并解析
 
 ## 🔖 用例
 
@@ -79,7 +81,7 @@ func mutilPartsMail(): SendMail {
    let mail = SendMail()
    mail.mailFrom.name = "niuhuan"
    mail.mailFrom.address = "niuhuan@mail.com"
-   mail.rcptTo = [MailAddress("niuhuan", "niuhuan@mail.com")]
+   mail.rcptTo = ArrayList([MailAddress("niuhuan", "niuhuan@mail.com")])
    let content = MimeMutilParts()
    // html 渲染邮件内容
    content.append(MimeText("<h1>Hello, World!</h1>","text/html")) 
@@ -129,7 +131,7 @@ main(): Int64 {
     // 查询邮件, 或者下载邮件
     let mails = imap.fetch("1:10", "FULL")
     // 下载邮件并解析
-    let mails = imap.fetchAndParse("1:10")
+    let mails = imap.fetchParse("1:10")
     for ((uid, mail) in mails) { 
         println("uid : ${uid}, mail : ${mail}")
     }
@@ -143,7 +145,7 @@ main(): Int64 {
 
 #### 计划中的特性
 
-- [ ] `Cc`
+- [ ] 自定义socket连接
 - [ ] 附件输入流的方式读取
 - [ ] IMAP 解析混合附件主要类型
 - [ ] [Subtypes for rfc1341](https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html) 以及嵌套 alternative

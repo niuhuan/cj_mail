@@ -113,16 +113,16 @@ public class Smtp {
       }
       writeCommand("DATA")
       readCommand()
-      putMailData(mail.mailFrom, mail.rcptTo, mail.subject, mail.data)
+      putMailData(mail.mailFrom, mail.rcptTo, mail.cc, mail.bcc, mail.subject, mail.data)
       writeCommand(".")
       writeCommand("")
       readCommand()
    }
 
 
-   private func putMailData(from: Option<MailAddress>, to: ArrayList<MailAddress>, subject: String, mailData: MailContent): Unit {
+   private func putMailData(from: Option<MailAddress>, to: ArrayList<MailAddress>, cc: ArrayList<MailAddress>, bcc: ArrayList<MailAddress>, subject: String, mailData: MailContent): Unit {
       if (let Some(data) <- mailData as String) {
-         putMailAddressesSubject(from, to, subject)
+         putMailAddressesSubject(from, to, cc, bcc, subject)
          writeCommand("")
          for (line in data.split("\n")) {
             if (line == ".") {
@@ -132,7 +132,7 @@ public class Smtp {
             }   
          }
       } else if (let Some(data) <- mailData as MimeText) {
-         putMailAddressesSubject(from, to, subject)
+         putMailAddressesSubject(from, to, cc, bcc, subject)
          writeCommand("Content-Type: ${data.contentType}; charset=\"UTF-8\"")
          writeCommand("MIME-Version: 1.0")
          writeCommand("Content-Transfer-Encoding: base64")
@@ -142,7 +142,7 @@ public class Smtp {
          writeCommand("")
          writeCommand(toBase64String(data.text.toArray()))
       } else if (let Some(data) <- mailData as MimeFile) {
-         putMailAddressesSubject(from, to, subject)
+         putMailAddressesSubject(from, to, cc, bcc, subject)
          writeCommand("Content-Type: ${data.contentType}; name=\"${data.contentType}\"")
          writeCommand("Content-Disposition: attachment; filename=\"${data.fileName}\"")
          writeCommand("MIME-Version: 1.0")
@@ -161,14 +161,14 @@ public class Smtp {
          }
          writeCommand("Content-Type: ${mimeType}; boundary=\"${boundary}\"")
          writeCommand("MIME-Version: 1.0")
-         putMailAddressesSubject(from, to, subject)
+         putMailAddressesSubject(from, to, cc, bcc, subject)
          if (data.contentId != "") {
             writeCommand("Content-ID: <${data.contentId}>")
          }
          for (part in data) {
             writeCommand("")
             writeCommand("--${boundary}")
-            putMailData(None, ArrayList<MailAddress>(), "", part)
+            putMailData(None, ArrayList<MailAddress>(), ArrayList<MailAddress>(), ArrayList<MailAddress>(), "", part)
          }
          writeCommand("")
          writeCommand("--${boundary}--")
@@ -192,7 +192,7 @@ public class Smtp {
    }
 
 
-   private func putMailAddressesSubject(from: Option<MailAddress>, rcptTo: ArrayList<MailAddress>, subject: String) {
+   private func putMailAddressesSubject(from: Option<MailAddress>, rcptTo: ArrayList<MailAddress>, ccTo: ArrayList<MailAddress>, bccTo: ArrayList<MailAddress>, subject: String) {
       if (from.isSome()) {
          writeCommand("From: ${from.getOrThrow().toString()}")
       }
@@ -205,6 +205,26 @@ public class Smtp {
             to += rcpt.toString()
          }
          writeCommand("To: ${to}")
+      }
+      if (ccTo.size > 0) {
+         var ccStr = ""
+         for (cc in ccTo) {
+            if (ccStr != "") {
+               ccStr += ", "
+            }
+            ccStr += cc.toString()
+         }
+         writeCommand("Cc: ${ccStr}")
+      }
+      if (bccTo.size > 0) {
+         var bccStr = ""
+         for (bcc in bccTo) {
+            if (bccStr != "") {
+               bccStr += ", "
+            }
+            bccStr += bcc.toString()
+         }
+         writeCommand("Bcc: ${bccStr}")
       }
       if (subject != "") {
          writeCommand("Subject: ${subject}")

@@ -49,6 +49,8 @@ public func parseMailAddresses(addresses: String): ArrayList<MailAddress> {
 public class Mail {
    public var mailFrom: MailAddress
    public var rcptTo: ArrayList<MailAddress>
+   public var cc: ArrayList<MailAddress>
+   public var bcc: ArrayList<MailAddress>
    public var subject: String
    public var data: MailContent = ""
 }
@@ -57,7 +59,7 @@ extend Mail <: ToString {
    public func toString(): String {
       let builder = StringBuilder()
       append(builder, data)
-      "Mail(mailFrom=${mailFrom}, rcptTo=${rcptTo}, subject=${subject}, data=${builder})"
+      "Mail(mailFrom=${mailFrom}, rcptTo=${rcptTo}, cc=${cc}, subject=${subject}, data=${builder})"
    }
 
    private func append(builder: StringBuilder, data: MailContent): Unit {
@@ -160,9 +162,11 @@ public class MimeMutilParts <: Collection<MailContent> & MailContent {
 }
 
 
-public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (String, String, String, MailContent) {
+public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (String, String, String, String, String, MailContent) {
    var from = ""
    var to = ""
+   var cc = ""
+   var bcc = ""
    var subject = ""
    var contentId = ""
    var contentType = ""
@@ -176,7 +180,7 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
             break
       } else if (!line.contains(":")) {
             if (noHeaderAsText) {
-               return (from, to, subject, content)
+               return (from, to, cc, bcc, subject, content)
             }
             throw MailContentParseException("Missing colon in mail content header", line)
       }
@@ -189,6 +193,8 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
       match (key) {
             case "From" => from = value
             case "To" => to = value
+            case "Cc" => cc = value
+            case "Bcc" => bcc = value
             case "Subject" => subject = value
             case "Content-ID" => contentId = value
             case "Content-Type" => contentType = value
@@ -239,7 +245,7 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
       if ("base64" == contentTransferEncoding) {
             textBody = String.fromUtf8(parseBase64MailContent(textBody))
       }
-      return (from, to, subject, textBody)
+      return (from, to, cc, bcc, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
       var line =  lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
       // first boundary
@@ -252,14 +258,14 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
       mimeMutilParts.headers = headers
       // blank content
       if (line == "--${boundary}--") {
-            return (from, to, subject, mimeMutilParts)
+            return (from, to,  cc, bcc, subject, mimeMutilParts)
       }
       // children
       var builder = StringBuilder()
       while(true) {
             line = lines.next().getOrThrow({=> MailContentParseException("The email content ended prematurely")})
             if (line.startsWith("--${boundary}")) {
-               let (_, _, _, data) = parseMailContent(builder.toString())
+               let (_, _, _, _, _, data) = parseMailContent(builder.toString())
                mimeMutilParts.append(data)
                if (line == "--${boundary}--") {
                   break
@@ -270,9 +276,9 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
             builder.append(line)
             builder.append("\r\n")
       }
-      return (from, to, subject, mimeMutilParts)
+      return (from, to,  cc, bcc, subject, mimeMutilParts)
    } else if (contentType == ""){
-      return (from, to, subject, content)
+      return (from, to, cc, bcc, subject, content)
    } else {
       var textBody = ""
       while(let Some(line) <- lines.next()) {
@@ -285,7 +291,7 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
       }
       file.headers = headers
       file.contentId = contentId
-      return (from, to, subject, file)
+      return (from, to, cc, bcc, subject, file)
    }
 }
 

@@ -162,7 +162,7 @@ public class Imap {
         readCommand(idx)
     }
 
-    public func fetchAndParse(sequenceSet: String): ArrayList<(Int64, ReceiveMail)> {
+    public func fetchParse(sequenceSet: String): ArrayList<(Int64, ReceiveMail)> {
         let emails = ArrayList<(Int64, ReceiveMail)>()
         let content = fetch(sequenceSet, "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])")
         let reader = StringReader(ByteArrayStream.fromString(content))
