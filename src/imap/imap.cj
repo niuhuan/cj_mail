@@ -314,11 +314,11 @@ public class Imap {
                                 if (content == "--") {
                                     break
                                 }
-                                let (_, _, _, data)  = parseMailContent(content, noHeaderAsText: true)
+                                let (_, _, _, _, _, data)  = parseMailContent(content, noHeaderAsText: true)
                                 parts.append(data)
                             }
                         } else {
-                            let (_, _, _, data)  = parseMailContent(builder.toString(), noHeaderAsText: true)
+                            let (_, _, _, _, _, data)  = parseMailContent(builder.toString(), noHeaderAsText: true)
                             bodyContext = data
                         }
                     } else {
