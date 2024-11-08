@@ -98,7 +98,12 @@ public class Imap {
     }
 
     public func connect() {
-      this.connection =defaultTlsConnect(host, tlsPort)
+      this.connection = defaultTlsConnect(host, tlsPort)
+      readCommand(None) // Server Hello
+    }
+
+    public func connect(socket: StreamingSocket) {
+        this.connection = mailConnection(socket)
         readCommand(None) // Server Hello
     }
 

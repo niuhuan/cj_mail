@@ -60,3 +60,7 @@ public func defaultTlsConnect(host: String, port: UInt16): MailConnection {
       }
       MailConnection(tls)
 }
+
+public func mailConnection(socket: StreamingSocket) {
+    MailConnection(socket)
+}

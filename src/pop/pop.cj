@@ -28,7 +28,12 @@ public class Pop {
    public var connection: ?MailConnection = None
 
    public func connect() {
-      this.connection =defaultTlsConnect(host, tlsPort)
+      this.connection = defaultTlsConnect(host, tlsPort)
+      readCommand() // Server Hello
+   }
+
+   public func connect(socket: StreamingSocket) {
+      this.connection = mailConnection(socket)
       readCommand() // Server Hello
    }
 

@@ -72,8 +72,16 @@ public class Smtp {
    }
 
    public func connect() {
-      this.connection =defaultTlsConnect(host, tlsPort)
-      // init smtp
+      this.connection = defaultTlsConnect(host, tlsPort)
+      smtpInit()
+   }
+
+   public func connect(socket: StreamingSocket) {
+      this.connection = mailConnection(socket)
+      smtpInit()
+   }
+
+   private func smtpInit() {
       readCommand() // Server Hello
       writeCommand("EHLO ${host}")
       let ehloResponse = readCommand()
