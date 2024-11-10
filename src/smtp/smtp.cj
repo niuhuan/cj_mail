@@ -35,7 +35,7 @@ public class Smtp {
    }
 
    private func readCommand() : SmtpResponse {
-      let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
+      let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).reader
       let serverResponse = SmtpResponse()
       while (true) {
          var line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})

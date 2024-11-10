@@ -36,7 +36,11 @@ public class MailContentParseException <: MailException & ToString{
     }
 
     public override func toString(): String {
-        "MailContentParseException: ${message} (${line})"
+        var msg = "MailContentParseException: ${message}"
+        if (_line != "") {
+            msg += "\n${_line}"
+        }
+        msg 
     }
 }
 

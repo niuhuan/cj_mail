@@ -6,6 +6,8 @@ import std.regex.*
 import cj_lombok.*
 import encoding.base64.*
 import log.*
+import std.fs.*
+
 
 let logger = getGlobalLogger(("cj_mail", "Parser"))
 let mailAddressPattern = Regex("^(.*)?<(.*)>$")
@@ -58,35 +60,14 @@ public class Mail {
 
 extend Mail <: ToString {
    public func toString(): String {
-      let builder = StringBuilder()
-      append(builder, data)
-      "Mail(mailFrom=${mailFrom}, rcptTo=${rcptTo}, cc=${cc}, subject=${subject}, data=${builder})"
-   }
-
-   private func append(builder: StringBuilder, data: MailContent): Unit {
-      if (let Some(str) <- data as String) {
-         builder.append(str)
-      } else if (let Some(str) <- data as MimeText) {
-         builder.append("MimeText(contentType=${str.contentType}, size=${str.text.size}, text=${str.text})")
-      } else if (let Some(file) <- data as MimeFile) {
-         builder.append("MimeFile(contentType=${file.contentType}, size=${file.data.size})")
-      } else if (let Some(parts) <- data as MimeMutilParts) {
-         builder.append("MimeMutilParts(contentType=${parts.contentType}, size=${parts.size}, parts=[")
-         for (part in parts) {
-            append(builder, part)
-            builder.append(", ")
-         }
-         builder.append("])")
-      } else {
-         builder.append("Unknown")
-      }
+      "Mail(mailFrom=${mailFrom}, rcptTo=${rcptTo}, cc=${cc}, bcc=${bcc}, subject=${subject}, data=${data})"
    }
 }
 
 public type SendMail = Mail
 public type ReceiveMail = Mail
 
-public interface MailContent {
+public interface MailContent <: ToString {
 }
 
 
@@ -110,6 +91,10 @@ public class MimeText <: MailContent {
      public init(text: String, contentType: String) {
         this.text = text
         this.contentType = contentType
+     }
+
+     public func toString(): String {
+         "MimeText(contentType=${contentType}, size=${text.size}, text=${text})"
      }
 }
 
@@ -136,6 +121,10 @@ public class MimeFile <: MailContent {
      public func addHeader(name: String, value: String) {
         headers.append((name, value))
      }
+
+     public func toString(): String {
+         "MimeFile(contentType=${contentType}, size=${data.size})"
+     }
 }
 
 @Default
@@ -160,10 +149,20 @@ public class MimeMutilParts <: Collection<MailContent> & MailContent {
    public func append(part: MailContent) {
       parts.append(part)
    }
+
+   public func toString(): String {
+      "MimeMutilParts(contentType=${contentType}, size=${parts.size}, parts=${parts})"
+   }
 }
 
 
-public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (String, String, String, String, String, MailContent) {
+public enum MailContentType {
+   | Main
+   | Par
+}
+
+
+public func parseMailContent(content: String, isPartEntry!: Bool = false) : (String, String, String, String, String, MailContent) {
    var from = ""
    var to = ""
    var cc = ""
@@ -205,7 +204,7 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
    while(true){
       let line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
       if (first && !line.contains(":")) {
-            if (noHeaderAsText) {
+            if (isPartEntry) {
                return (from, to, cc, bcc, subject, content)
             }
             throw MailContentParseException("Missing colon in mail content header", line)
@@ -219,9 +218,11 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
             parseHeader()
             headerLine += line
             headerLine += "\r\n"
-      } else if (headerLine.startsWith("    ")) {
-            headerLine += line
-            headerLine += "\r\n"
+      } else if (Regex("^\\s+[^\n]+").matches(line).isSome()) {
+            headerLine += " "
+            headerLine += line.trimAscii()
+      } else {
+         throw MailContentParseException("Invalid header line", line)
       }
    }
    parseHeader()
@@ -240,6 +241,9 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
    }
    // todo ?q? quopri
    // parse mime
+   if (contentType == "") {
+      return (from, to, cc, bcc, subject, content)
+   }
    let parts = contentType.split(";")
    let contentTypeMime = parts[0].trimAscii()
    var boundary=""
@@ -275,10 +279,12 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
       }
       return (from, to, cc, bcc, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
+      if (boundary == "") {
+            throw MailContentParseException("multipart missing boundary", contentType)
+      }
       var line =  lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
-      // first boundary
-      if (!line.startsWith("--${boundary}")) {
-            throw MailContentParseException("Missing mail boundary", line)
+      while (!line.startsWith("--${boundary}")) {
+            line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely not found boundary")})
       }
       let mimeMutilParts = MimeMutilParts()
       mimeMutilParts.contentType = contentTypeMime
@@ -293,7 +299,7 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
       while(true) {
             line = lines.next().getOrThrow({=> MailContentParseException("The email content ended prematurely")})
             if (line.startsWith("--${boundary}")) {
-               let (_, _, _, _, _, data) = parseMailContent(builder.toString())
+               let (_, _, _, _, _, data) = parseMailContent(builder.toString(), isPartEntry: true)
                mimeMutilParts.append(data)
                if (line == "--${boundary}--") {
                   break
@@ -323,11 +329,11 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
    }
 }
 
-func parseBase64MailContent(content: String): Array<Byte> {
+public func parseBase64MailContent(content: String): Array<Byte> {
    fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow({=>MailContentParseException("Invalid base64 content", content)})
 }
 
-func parseQuotedPrintableMailContent(content: String): Array<Byte> {
+public func parseQuotedPrintableMailContent(content: String): Array<Byte> {
    let builder = ByteArrayStream()
    let reader = StringReader(ByteArrayStream.fromString(content.trimAscii()))
    while(let Some(rune) <- reader.read()) {

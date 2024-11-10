@@ -48,7 +48,7 @@ public class Pop {
     }
 
     public func readCommand(): String {
-        let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
+        let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).reader
         let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
         logger.trace("S: ${line}")
         if (line.toAsciiLower().startsWith("-ERR")) {

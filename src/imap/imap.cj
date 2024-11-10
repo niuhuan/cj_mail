@@ -45,7 +45,7 @@ public class Imap {
     }
 
     public func readCommand(cmdIdx: Option<String>): String {
-        let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
+        let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).reader
         match (cmdIdx) {
             case Some(cmdIdx)=>
                 let builder = StringBuilder()
@@ -61,9 +61,7 @@ public class Imap {
                                     case Some(s) =>
                                         let len = Int64.parse(s.matchStr(1))
                                         logger.trace(".. for read Rune * ${len} from server ..")
-                                        for (_ in 0..len) {
-                                            builder.append(reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")}))
-                                        }
+                                        builder.append(String.fromUtf8(reader.readSize(len)))
                                         let left = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
                                         logger.trace(".. line left : ${left} ..")
                                         builder.append(left)
@@ -180,7 +178,7 @@ public class Imap {
     public func fetchParse(sequenceSet: String): ArrayList<(Int64, ReceiveMail)> {
         let emails = ArrayList<(Int64, ReceiveMail)>()
         let content = fetch(sequenceSet, "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])")
-        let reader = StringReader(ByteArrayStream.fromString(content))
+        let reader = StreamReader(ByteArrayStream.fromString(content))
         while (let Some(line) <- reader.readln()) {
             if (line.startsWith("* ")) {
                 var builder = StringBuilder(line)
@@ -189,9 +187,7 @@ public class Imap {
                     case Some(s) =>
                         let len = Int64.parse(s.matchStr(1))
                         logger.trace(".. for read Rune * ${len} from context ..")
-                        for (_ in 0..len) {
-                            builder.append(reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")}))
-                        }
+                        builder.append(String.fromUtf8(reader.readSize(len)))
                         let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
                         logger.trace(".. line left : ${line} ..")
                         builder.append(line)
@@ -202,33 +198,31 @@ public class Imap {
                 var uid = 0
                 var flags = ArrayList<String>()
                 var internalDate = ""
-                var body = ""
+                var body: Option<ImapValue> = None
                 var bodyContext: MailContent = ""
                 var size = 0
                 var subject = ""
                 var from = MailAddress("", "")
                 var to = ArrayList<MailAddress>()
-
-                let reader = StringReader(ByteArrayStream.fromString(line))
+                let reader = StreamReader(ByteArrayStream.fromString(line))
                 let _ = reader.readUntil({rune => rune == r' '}) // skip "* "
                 uid = Int64.parse(reader.readUntil({rune => rune == r' '}).getOrThrow().trimAscii())
                 let _ = reader.readUntil({rune => rune == r' '}) // skip "FETCH "
-                if (r'(' != reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})) {
+                if (r'(' != reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})) {
                     throw MailContentParseException("Invalid response")
                 }
                 while(let Some(dataType) <- reader.readUntil({rune => rune == r' '})) {
-                    // end of mail
-                    if (dataType.startsWith(")")) {
+                    if (dataType.startsWith(")") || dataType.startsWith(") ")) {
                         break
                     } else if (dataType == " ") {
                         continue
                     } else if (dataType == "FLAGS ") {
-                        if (r'(' != reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})) {
+                        if (r'(' != reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})) {
                             throw MailContentParseException("Invalid response")
                         }
                         flags.appendAll(reader.readUntil({rune => rune == r')'}).getOrThrow().trimRight(")").split(" "))
                     } else if (dataType == "INTERNALDATE ") {
-                        reader.read() // skip \"
+                        reader.readRune() // skip \"
                         let time = reader.readUntil({rune => rune == r'\"'}).getOrThrow().trimRight("\"")
                         internalDate = time
                     } else if (dataType == "RFC822.SIZE ") {
@@ -274,65 +268,68 @@ public class Imap {
                                 }
                             case _ => ()
                         }
-                    }  else if (dataType == "BODY ") {
+                    }  else if (dataType == "BODY "|| dataType == "BODYSTRUCTURE ") {
                         // BODY ("text" "plain" ("charset" "us-ascii") NIL NIL "7bit" 3 0)
                         // BODY (("text" "plain" ("charset" "UTF-8") NIL NIL "base64" 22 1)("text" "html" ("charset" "UTF-8") NIL NIL "base64" 34 1)("application" "octet-stream" NIL NIL NIL "base64" 22) "mixed")
-                        var counter = 0
-                        let builder = StringBuilder()
-                        var skipping = false
-                        while (true) {
-                            let rune = reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})
-                            builder.append(rune)
-                            if (rune == r'"') {
-                                skipping = !skipping
-                            }
-                            if (!skipping) {
-                                if (rune == r'(') {
-                                    counter += 1
-                                } else if (rune == r')') {
-                                    counter -= 1
-                                }
-                            }
-                            if (counter == 0) {
-                                break
-                            }
+                        body = match (parseThisItem(reader)) {
+                            case ImapValue.LIST(list) =>
+                                ImapValue.LIST(list)
+                            case _ =>
+                                throw MailContentParseException("Invalid fetch ENVELOPE")
                         }
-                        body = builder.toString()
                     } else if (dataType == "BODY[TEXT] ") {
-                        reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")}) // skip "{"
+                        reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")}) // skip "{"
                         let sizeStr = reader.readUntil({rune => rune == r'}'}).getOrThrow({=>MailConnectExcption("Connect has been eof")}).trimRight("}")
                         let size = Int64.parse(sizeStr)
                         let builder = StringBuilder()
-                        for (_ in 0..size) {
-                            builder.append(reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")}))
-                        }
+                        builder.append(String.fromUtf8(reader.readSize(size)))
                         let content = builder.toString();
-                        if (body.startsWith("((")) {
-                            var sp = content.split("\r\n", 2)
-                            if (!sp[0].startsWith("--")) {
-                                throw MailContentParseException("Invalid fetch ${dataType}")
-                            }
-                            let boundary = sp[0].trimLeft("--").trimRight("--")
-                            let parts = MimeMutilParts()
-                            bodyContext = parts
-                            if (sp[0] == "--${boundary}--") {
-                                continue
-                            }
-                            sp = content.split("--${boundary}", removeEmpty: true)
-                            for (mime in sp) {
-                                let content = mime.trimLeft("\r\n")
-                                if (content == "--") {
-                                    break
+                        let bodyOption = body.getOrThrow({=>MailContentParseException("Invalid fetch BODY. not found")})
+                        let bodyList = match (bodyOption) {
+                            case ImapValue.LIST(data) => data
+                            case _ => throw MailContentParseException("Invalid fetch BODY TYPE")
+                        }
+                        match (bodyList[0]) {
+                            case ImapValue.LIST(data) =>
+                                var findBoundary = content.split("\r\n", removeEmpty: true)
+                                var findBoundaryStr = findBoundary[findBoundary.size - 1].trimAscii()
+                                let boundary = if (findBoundaryStr.startsWith("--") && findBoundaryStr.endsWith("--")) {
+                                    findBoundaryStr = findBoundaryStr.trimLeft("--").trimRight("--")
+                                } else {
+                                    throw MailContentParseException("Invalid fetch BODY. findBoundaryStr")
                                 }
-                                let (_, _, _, _, _, data)  = parseMailContent(content, noHeaderAsText: true)
-                                parts.append(data)
-                            }
-                        } else {
-                            let (_, _, _, _, _, data)  = parseMailContent(builder.toString(), noHeaderAsText: true)
-                            bodyContext = data
+                                let parts = MimeMutilParts()
+                                bodyContext = parts
+                                var sp = content.split("--${boundary}", removeEmpty: true)
+                                if (!content.startsWith("--")) {
+                                    sp = sp[1..]
+                                }
+                                for (mime in sp) {
+                                    let content = mime.trimAscii()
+                                    if (content == "--") {
+                                        break
+                                    }
+                                    let (_, _, _, _, _, data)  = parseMailContent(content, isPartEntry: true)
+                                    parts.append(data)
+                                }
+                            case ImapValue.STRING("TEXT") | ImapValue.STRING("text") =>
+                                if (bodyList.size < 6) {
+                                    throw MailContentParseException("Invalid fetch BODY. bodyList")
+                                }
+                                match (bodyList[5]) {
+                                    case ImapValue.STRING("QUOTED-PRINTABLE")|ImapValue.STRING("quoted-printable") =>
+                                        bodyContext = String.fromUtf8(parseQuotedPrintableMailContent(content))
+                                    case ImapValue.STRING("BASE64")|ImapValue.STRING("base64") =>
+                                        bodyContext = String.fromUtf8(parseBase64MailContent(content))
+                                    case _ =>
+                                        bodyContext = content
+                                }
+                            case _ =>
+                                let (_, _, _, _, _, data)  = parseMailContent(builder.toString())
+                                bodyContext = data
                         }
                     } else {
-                        throw MailContentParseException("Invalid fetch ${dataType}")
+                        throw MailContentParseException("Invalid fetch: warn type ${dataType}")
                     }
                 }
                 let mail = ReceiveMail()
@@ -387,9 +384,9 @@ extend ImapValue <: ToString {
     }
 }
 
-private func parseThisItem(reader: StringReader<ByteArrayStream>): ImapValue {
+private func parseThisItem(reader: StreamReader): ImapValue {
     let builder = StringBuilder()
-    var rune = reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+    var rune = reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})
     builder.append(rune)
     match (rune) {
         case r"(" => 
@@ -400,16 +397,20 @@ private func parseThisItem(reader: StringReader<ByteArrayStream>): ImapValue {
             return parseNil(builder, reader)
         case _ =>
             if (rune >= r'0' && rune <= r'9') {
-                return parseNumber(builder, reader)
+                let (value, end) = parseNumber(builder, reader)
+                if (end) {
+                    throw MailContentParseException("Invalid item todo : end")
+                }
+                return value
             }
-            throw MailContentParseException("Invalid NUMBER")
+            throw MailContentParseException("Invalid item : ${rune}")
     }
 }
 
-private func parseList(reader: StringReader<ByteArrayStream>): ImapValue {
+private func parseList(reader: StreamReader): ImapValue {
     let values = ArrayList<ImapValue>()
     while (true) {
-        let rune = reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+        let rune = reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})
         match (rune) {
             case " " =>
                 continue
@@ -423,17 +424,22 @@ private func parseList(reader: StringReader<ByteArrayStream>): ImapValue {
                 values.append(parseNil(StringBuilder("N"), reader))
             case _ =>
                 if (rune >= r'0' && rune <= r'9') {
-                    values.append(parseNumber(StringBuilder(rune), reader))
+                    let (value, end) = parseNumber(StringBuilder(rune), reader)
+                    values.append(value)
+                    if (end) {
+                        break
+                    }
+                } else {
+                    throw MailContentParseException("Invalid parse : ${rune}")
                 }
-                throw MailContentParseException("Invalid NUMBER")
         }
     }
     ImapValue.LIST(values)
 }
 
-private func parseNil(builder: StringBuilder, reader: StringReader<ByteArrayStream>): ImapValue {
+private func parseNil(builder: StringBuilder, reader: StreamReader): ImapValue {
     for (_ in 0..2) {
-        let rune = reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+        let rune = reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})
         builder.append(rune)
     }
     if (builder.toString() == "NIL") {
@@ -443,11 +449,11 @@ private func parseNil(builder: StringBuilder, reader: StringReader<ByteArrayStre
     }
 }
 
-private func parseString(reader: StringReader<ByteArrayStream>): ImapValue {
+private func parseString(reader: StreamReader): ImapValue {
     let cBuilder = StringBuilder()
     var inEscape = false
     while (true) {
-        let rune = reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+        let rune = reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})
         if (inEscape) {
             inEscape = false
             cBuilder.append(rune)
@@ -462,18 +468,22 @@ private func parseString(reader: StringReader<ByteArrayStream>): ImapValue {
     return ImapValue.STRING(cBuilder.toString())
 }
 
-private func parseNumber(builder: StringBuilder, reader: StringReader<ByteArrayStream>): ImapValue {
+private func parseNumber(builder: StringBuilder, reader: StreamReader): (ImapValue, Bool) {
+    var end = false
     while (true) {
-        let rune = reader.read().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+        let rune = reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})
         if (rune >= r'0' && rune <= r'9') {
-
+            continue
         } else if (rune == r' ') {
             break
+        } else if (rune == r')') {
+            end = true
+            break
         } else {
-            throw MailContentParseException("Invalid NUMBER")
+            throw MailContentParseException("Invalid NUMBER : ${rune}")
         }
     }
-    return ImapValue.NUMBER(Int64.parse(builder.toString()))
+    return (ImapValue.NUMBER(Int64.parse(builder.toString())), end)
 }
 
 private func parseImapAddress(list: ArrayList<ImapValue>): MailAddress {
