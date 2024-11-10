@@ -103,8 +103,11 @@ public class Pop {
         if (!line.startsWith("+OK")) {
             throw Exception("Invalid response : ${line}")
         }
-        let parts = line.split(" ")
-        let count = Int64.parse(parts[1])
+        var count = -1
+        if (line != "+OK") {
+            let parts = line.split(" ")
+            count = Int64.parse(parts[1])
+        }
         let mails = ArrayList<(Int64, Int64)>()
         while (true) {
             let line = readCommand()
