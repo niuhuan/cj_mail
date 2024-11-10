@@ -51,7 +51,7 @@ public class Pop {
         let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
         let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
         logger.trace("S: ${line}")
-        if (line.startsWith("-ERR")) {
+        if (line.toAsciiLower().startsWith("-ERR")) {
             throw PopException(line)
         }
         line
@@ -125,12 +125,9 @@ public class Pop {
     public func list(msg: Int64) : (Int64, Int64) {
         writeCommand("LIST ${msg}")
         let response = readCommand()
-        let parts = response.split(" ")
-        if (parts.size < 2) {
-            throw Exception("Invalid response")
-        }
-        let idx = Int64.parse(parts[0])
-        let size = Int64.parse(parts[1])
+        let matcher = Regex("^(\\+OK )?(\\d+) (\\d+)$").matches(response).getOrThrow({=>Exception("Invalid response")})
+        let idx = Int64.parse(matcher.matchStr(2))
+        let size = Int64.parse(matcher.matchStr(3))
         (idx, size)
     }
 

@@ -167,6 +167,16 @@ public class Imap {
         readCommand(idx)
     }
 
+    public func quit() {
+        let idx = nextCmdIdx();
+        writeCommand("${idx} LOGOUT")
+        readCommand(idx)
+    }
+
+    public func disconnect() {
+        this.connection.getOrThrow().disconnect()
+    }
+
     public func fetchParse(sequenceSet: String): ArrayList<(Int64, ReceiveMail)> {
         let emails = ArrayList<(Int64, ReceiveMail)>()
         let content = fetch(sequenceSet, "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])")

@@ -1,6 +1,7 @@
 package cj_mail.commons
 
 import std.collection.*
+import std.io.*
 import std.regex.*
 import cj_lombok.*
 import encoding.base64.*
@@ -66,7 +67,7 @@ extend Mail <: ToString {
       if (let Some(str) <- data as String) {
          builder.append(str)
       } else if (let Some(str) <- data as MimeText) {
-         builder.append("MimeText(contentType=${str.contentType}, size=${str.text.size})")
+         builder.append("MimeText(contentType=${str.contentType}, size=${str.text.size}, text=${str.text})")
       } else if (let Some(file) <- data as MimeFile) {
          builder.append("MimeFile(contentType=${file.contentType}, size=${file.data.size})")
       } else if (let Some(parts) <- data as MimeMutilParts) {
@@ -174,19 +175,15 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
    var headers = ArrayList<(String, String)>()
    // read header
    let lines = content.lazySplit("\r\n")
-   while(true){
-      let line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
-      if (line == "") {
-            break
-      } else if (!line.contains(":")) {
-            if (noHeaderAsText) {
-               return (from, to, cc, bcc, subject, content)
-            }
-            throw MailContentParseException("Missing colon in mail content header", line)
+   // foreach Header
+   var headerLine = ""
+   func parseHeader() {
+      if (headerLine == "") {
+         return
       }
-      let parts = line.split(":", 2, removeEmpty: true)
+      let parts = headerLine.trimAscii().split(":", 2, removeEmpty: true)
       if (parts.size < 2) {
-            throw MailContentParseException("Missing colon in mail content header value", line)
+            throw MailContentParseException("Missing colon in mail content header value", headerLine)
       }
       let key = parts[0].trimAscii()
       let value = parts[1].trimAscii()
@@ -202,13 +199,42 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
             case _ => 
                   headers.append((key, value))
       }
+      headerLine = ""
    }
+   var first = true;
+   while(true){
+      let line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
+      if (first && !line.contains(":")) {
+            if (noHeaderAsText) {
+               return (from, to, cc, bcc, subject, content)
+            }
+            throw MailContentParseException("Missing colon in mail content header", line)
+      } else {
+         first = false
+      }
+      if (line == "") {
+            parseHeader()
+            break
+      } else if (line.contains(":")) {
+            parseHeader()
+            headerLine += line
+            headerLine += "\r\n"
+      } else if (headerLine.startsWith("    ")) {
+            headerLine += line
+            headerLine += "\r\n"
+      }
+   }
+   parseHeader()
    // fix
    // "=?{charset}?{encoding}?{encoded_text}?="
-   if (subject.startsWith("=?utf-8?b?") && subject.endsWith("?=")) {
+   if (subject.toAsciiLower().startsWith("=?utf-8?b?") && subject.endsWith("?=")) {
       let encoded = subject[10..subject.size-2]
       subject = String.fromUtf8(parseBase64MailContent(encoded))
+   } else if (subject.toAsciiLower().startsWith("=?utf-8?q?") && subject.endsWith("?=")) {
+      let encoded = subject[10..subject.size-2]
+      subject = String.fromUtf8(parseQuotedPrintableMailContent(encoded))
    }
+   
    if (contentId.startsWith("<") && contentId.endsWith(">")) {
       contentId = contentId[1..contentId.size-1]
    }
@@ -244,6 +270,8 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
       }
       if ("base64" == contentTransferEncoding) {
             textBody = String.fromUtf8(parseBase64MailContent(textBody))
+      } else if ("quoted-printable" == contentTransferEncoding) {
+            textBody = String.fromUtf8(parseQuotedPrintableMailContent(textBody))
       }
       return (from, to, cc, bcc, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
@@ -297,5 +325,27 @@ public func parseMailContent(content: String, noHeaderAsText!: Bool = false) : (
 
 func parseBase64MailContent(content: String): Array<Byte> {
    fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow({=>MailContentParseException("Invalid base64 content", content)})
+}
+
+func parseQuotedPrintableMailContent(content: String): Array<Byte> {
+   let builder = ByteArrayStream()
+   let reader = StringReader(ByteArrayStream.fromString(content.trimAscii()))
+   while(let Some(rune) <- reader.read()) {
+      if (rune == r'=') {
+         let next =String([
+            reader.read().getOrThrow({=>MailContentParseException("Invalid quoted printable content", content)}),
+            reader.read().getOrThrow({=>MailContentParseException("Invalid quoted printable content", content)})
+         ])
+         if (next == "\r\n") {
+            continue
+         }
+         let byte = Byte.parse("0x${next}");
+         builder.write([byte])
+      } else {
+         let bytes = String([rune]).toArray();
+         builder.write(bytes)
+      }
+   }
+   builder.bytes()
 }
 
