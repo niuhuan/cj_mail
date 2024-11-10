@@ -228,13 +228,7 @@ public func parseMailContent(content: String, isPartEntry!: Bool = false) : (Str
    parseHeader()
    // fix
    // "=?{charset}?{encoding}?{encoded_text}?="
-   if (subject.toAsciiLower().startsWith("=?utf-8?b?") && subject.endsWith("?=")) {
-      let encoded = subject[10..subject.size-2]
-      subject = String.fromUtf8(parseBase64MailContent(encoded))
-   } else if (subject.toAsciiLower().startsWith("=?utf-8?q?") && subject.endsWith("?=")) {
-      let encoded = subject[10..subject.size-2]
-      subject = String.fromUtf8(parseQuotedPrintableMailContent(encoded))
-   }
+   subject = processSubject(subject)
    
    if (contentId.startsWith("<") && contentId.endsWith(">")) {
       contentId = contentId[1..contentId.size-1]
@@ -353,5 +347,31 @@ public func parseQuotedPrintableMailContent(content: String): Array<Byte> {
       }
    }
    builder.bytes()
+}
+
+func processSubject(subjectInput: String): String {
+   if (subjectInput == "") {
+      return ""
+   }
+   var subject = subjectInput
+   if (subject.startsWith("=?") && subject.endsWith("?=")) {
+      let builder = StringBuilder()
+      let sp = subject.split("\n")
+      for (spItem in sp) {
+         let item = spItem.trimAscii()
+         if (item.toAsciiLower().startsWith("=?utf-8?b?") && item.endsWith("?=")) {
+            let encoded = item[10..item.size-2]
+            builder.append(String.fromUtf8(parseBase64MailContent(encoded)))
+         } else if (item.toAsciiLower().startsWith("=?utf-8?q?") && item.endsWith("?=")) {
+            let encoded = item[10..item.size-2]
+            builder.append(String.fromUtf8(parseQuotedPrintableMailContent(encoded)))
+         } else {
+            builder.append(item)
+         }
+      }
+      return builder.toString()
+   } else {
+      return subject
+   }
 }
 
