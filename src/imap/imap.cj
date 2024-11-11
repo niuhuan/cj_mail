@@ -8,7 +8,6 @@ import cj_lombok.*
 import std.regex.*
 import std.io.*
 import std.collection.*
-import std.fs.*
 
 @AllArgsConstructor
 @ToString
@@ -76,7 +75,7 @@ public class Imap {
                             throw ImapException(line)
                         }
                     } else {
-                        throw MailContentParseException();
+                        throw MailContentParseException("Invalid response : ${line}");
                     }
                 }
                 throw Exception("Unreachable")
@@ -343,6 +342,43 @@ public class Imap {
         emails
     }
 
+    public func fetchInfo(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
+        let idx = nextCmdIdx()
+        let sequenceSetValue = match (sequenceSet) {
+            case Some(value) => value
+            case _ => "1:*" 
+        }
+        let uidStr = if (withUid) {
+            "UID "
+        } else {
+            ""
+        }
+        let command = "${idx} ${uidStr}FETCH ${sequenceSetValue} (UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Content-Type)])"
+        writeCommand(command)
+        let response = readCommand(idx)
+        let reader = StreamReader(ByteArrayStream.fromString(response))
+        let mails = ArrayList<ImapReceiveMail>()
+        while(true) {
+            let line = reader.readln().getOrThrow({=>MailContentParseException()})
+            if (line.startsWith("* ")) {
+                mails.append(parseImapMail(line, reader))
+            } else if (line.startsWith("${idx} ")) {
+                break
+            } else {
+                throw MailContentParseException()
+            }
+        }
+        mails
+    }
+
+    public func fetchInfo(sequenceSet: Option<String>): ArrayList<ImapReceiveMail> {
+        fetchInfo(sequenceSet, false)
+    }
+
+    public func fetchInfo(): ArrayList<ImapReceiveMail> {
+        fetchInfo(None)
+    }
+
     public func list(referenceName: String, mailboxName: String): String {
         let idx = nextCmdIdx();
         writeCommand("${idx} LIST \"${escapingDoubleQuote(referenceName)}\" \"${escapingDoubleQuote(mailboxName)}\"")
@@ -353,6 +389,187 @@ public class Imap {
         str.replace("\"", "\\\"")
     }
 
+}
+
+private func parseImapMail(line: String, reader: StreamReader): ImapReceiveMail {
+    var lineReader = StreamReader(ByteArrayStream.fromString(line.trimAscii()))
+    let mail = ImapReceiveMail()
+    if (lineReader.readRune().getOrThrow({=>MailContentParseException()}) != r"*") {
+        throw MailContentParseException()
+    }
+    if (lineReader.readRune().getOrThrow({=>MailContentParseException()}) != r" ") {
+        throw MailContentParseException()
+    }
+    let (idx, endListByIdx) = imapReaderNumber(lineReader)
+    if (endListByIdx) {
+        throw MailContentParseException()
+    }
+    mail.idx = idx
+    matchRunes("FETCH (", lineReader)
+    while (true) {
+        let name = imapReadItemName(lineReader)
+        if (name == ")") {
+            break
+        } else if (name == "UID") {
+            let (uid, endList) = imapReaderNumber(lineReader)
+            mail.uid = uid
+            if (endList) {
+                break
+            }
+        } else if (name == "RFC822.SIZE") {
+            let (size, endListBySize) = imapReaderNumber(lineReader)
+            mail.size = size
+            if (endListBySize) {
+                break
+            }
+        } else if (name == "FLAGS") {
+            mail.flags = imapReaderFlags(lineReader)
+        } else if (name.startsWith("BODY[")) {
+            let byteCount = imapReaderByteCount(lineReader);
+            if (lineReader.readRune().isSome()) {
+                throw MailContentParseException()
+            }
+            let mailData = reader.readSize(byteCount)
+            let str = String.fromUtf8(mailData)
+            let (from, to, cc, bcc, subject, data) = parseMailContent(str)
+            if (from != "") {
+                mail.mailFrom = parseMailAddress(from)
+            }
+            if (to != "") {
+                mail.rcptTo = parseMailAddresses(to)
+            }
+            if (cc != "") {
+                mail.cc = parseMailAddresses(cc)
+            }
+            if (bcc != "") {
+                mail.bcc = parseMailAddresses(bcc)
+            }
+            mail.subject = subject
+            mail.data = data
+            lineReader = StreamReader(ByteArrayStream.fromString(reader.readln().getOrThrow({=>MailConnectExcption()})))
+        } else {
+            throw MailContentParseException()
+        }
+    }
+    mail
+}
+
+private func imapReaderNumber(reader: StreamReader): (Int64, Bool) {
+    var endList = false
+    let builder = StringBuilder()
+    while(true) {
+        let rune = reader.readRune().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+        if (rune >= r'0' && rune <= r'9') {
+            builder.append(rune)
+            continue
+        } else if (rune == r' ') {
+            if (builder.size == 0) {
+               continue
+            }
+            break
+        } else if (rune == r')') {
+            endList = true
+            break
+        } else {
+            throw MailContentParseException("Invalid NUMBER : ${rune}")
+        }
+    }
+    return (Int64.parse(builder.toString()), endList)
+}
+
+private func matchRunes(runes: String, reader: StreamReader) {
+    for(rune in runes.runes()) {
+        if (rune != reader.readRune().getOrThrow({=>MailConnectExcption()})) {
+            throw MailConnectExcption()
+        }
+    }
+}
+
+private func imapReadItemName(reader: StreamReader): String {
+    let builder = StringBuilder()
+    var inSquareBrackets = false
+    while (true) {
+        let rune = reader.readRune().getOrThrow({=>MailConnectExcption()})
+        if (rune == r" " && !inSquareBrackets) {
+            if (builder.size == 0) {
+                continue
+            }
+            break
+        } 
+        if (!inSquareBrackets) {
+            if (rune == r")") {
+                if (builder.size == 0) {
+                    return ")"
+                }
+                throw MailContentParseException(" ${builder} ${rune}")
+            }
+            if (rune == r"(") {
+                throw MailContentParseException(" ${builder} ${rune}")
+            }
+        }
+        builder.append(rune)
+        if (rune == r"[") {
+            inSquareBrackets = true
+        } else if (rune == r"]") {
+            inSquareBrackets = false
+        }  
+    }
+    builder.toString()
+}
+
+public func imapReaderFlags(reader: StreamReader): ArrayList<String> {
+    var builder = StringBuilder()
+    let list = ArrayList<String>()
+    func takeFlag() {
+        if (builder.size > 0) {
+            list.append(builder.toString())
+            builder = StringBuilder()
+        }
+    }
+    var inBrackets = false
+    while (true) {
+        let rune = reader.readRune().getOrThrow({=>MailConnectExcption()})
+        if (rune == r"(") {
+            if (!inBrackets) {
+                inBrackets = true
+            } else {
+                throw MailConnectExcption()
+            }
+        } else if (rune == r")") {
+            if (inBrackets) {
+                takeFlag()
+                break
+            } else {
+                throw MailConnectExcption()
+            }
+        } else if (rune == r" ") {
+            takeFlag()
+        }
+    }
+    list
+}
+
+private func imapReaderByteCount(reader: StreamReader): Int64{
+    let builder = StringBuilder()
+    var inCurlyBraces = false
+    while(true) {
+        let rune = reader.readRune().getOrThrow({=>MailContentParseException()})
+        if (rune == r" " && !inCurlyBraces) {
+            continue
+        } 
+        if (rune == r"{" && !inCurlyBraces) {
+            inCurlyBraces = true
+            continue
+        }
+        if (!inCurlyBraces) {
+            throw MailConnectExcption()
+        }
+        if (rune == r"}") {
+            break
+        }
+        builder.append(rune)
+    }
+    Int64.parse(builder.toString())
 }
 
 private enum ImapValue {
@@ -504,3 +721,4 @@ private func getImapValueString(value: ImapValue): String {
             ""
     }
 }
+

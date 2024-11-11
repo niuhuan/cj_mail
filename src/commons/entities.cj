@@ -6,11 +6,13 @@ import std.regex.*
 import cj_lombok.*
 import encoding.base64.*
 import log.*
-import std.fs.*
 
 
 let logger = getGlobalLogger(("cj_mail", "Parser"))
 let mailAddressPattern = Regex("^(.*)?<(.*)>$")
+
+
+/// MailAdress
 
 @Default
 @AllArgsConstructor
@@ -47,9 +49,11 @@ public func parseMailAddresses(addresses: String): ArrayList<MailAddress> {
    result
 }
 
+/// Mail
+
 @Default
 @AllArgsConstructor
-public class Mail {
+public open class Mail {
    public var mailFrom: MailAddress
    public var rcptTo: ArrayList<MailAddress>
    public var cc: ArrayList<MailAddress>
@@ -67,20 +71,32 @@ extend Mail <: ToString {
 public type SendMail = Mail
 public type ReceiveMail = Mail
 
-public interface MailContent <: ToString {
+public class ImapReceiveMail <: ReceiveMail {
+   public var idx: Int64
+   public var uid: Int64
+   public var size: Int64
+   public var flags: ArrayList<String>
+   public var messageId: String
+   public var contentType: String
+   public init() {
+      super()
+      idx = -1
+      uid = -1
+      size = -1
+      flags = ArrayList()
+      messageId = ""
+      contentType = ""
+   }
 }
 
+/// MailContent: MutilParts / MimeFile or MimeText
+
+public interface MailContent <: ToString {
+}
 
 extend String <: MailContent{
 }
 
-/*
-Content-Type: text/html; charset="utf-8"
-MIME-Version: 1.0
-Content-Transfer-Encoding: base64
-
-aGVsbG8sIHNlbmQgYnkgUHl0aG9uLi4u
-*/
 @Default
 public class MimeText <: MailContent {
      public var text: String = ""
@@ -98,14 +114,13 @@ public class MimeText <: MailContent {
      }
 }
 
-
 @Default
 public class MimeFile <: MailContent {
-     public var data: Array<Byte> = []
-     public var contentId: String = ""
-     public var contentType: String = ""
-     public var fileName: String = ""
-     public var headers: ArrayList<(String, String)> = ArrayList()
+     public var data: Array<Byte>
+     public var contentId: String
+     public var contentType: String
+     public var fileName: String
+     public var headers: ArrayList<(String, String)>
 
      public init(data: Array<Byte>, contentType: String) {
         this.data = data
@@ -155,14 +170,15 @@ public class MimeMutilParts <: Collection<MailContent> & MailContent {
    }
 }
 
+// parse conent (pop / imap)
 
 public enum MailContentType {
    | Main
    | Par
 }
 
-
 public func parseMailContent(content: String, isPartEntry!: Bool = false) : (String, String, String, String, String, MailContent) {
+   var onlyHeaders = false
    var from = ""
    var to = ""
    var cc = ""
@@ -173,7 +189,7 @@ public func parseMailContent(content: String, isPartEntry!: Bool = false) : (Str
    var contentTransferEncoding =""
    var headers = ArrayList<(String, String)>()
    // read header
-   let lines = content.lazySplit("\r\n")
+   let lines = content.lazySplit("\r\n", removeEmpty: true)
    // foreach Header
    var headerLine = ""
    func parseHeader() {
@@ -202,7 +218,13 @@ public func parseMailContent(content: String, isPartEntry!: Bool = false) : (Str
    }
    var first = true;
    while(true){
-      let line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely")})
+      let lineOption = lines.next()
+      let line = match (lineOption) {
+            case Some(l) => l
+            case None => 
+               onlyHeaders = true
+               break
+      }
       if (first && !line.contains(":")) {
             if (isPartEntry) {
                return (from, to, cc, bcc, subject, content)
@@ -262,6 +284,9 @@ public func parseMailContent(content: String, isPartEntry!: Bool = false) : (Str
    }
    // parse body
    if (contentTypeMime.startsWith("text/")) {
+      if (onlyHeaders) {
+         return (from, to, cc, bcc, subject, MimeText("", contentTypeMime))
+      }
       var textBody = ""
       while(let Some(line) <- lines.next()) {
             textBody += line + "\r\n"
@@ -271,8 +296,16 @@ public func parseMailContent(content: String, isPartEntry!: Bool = false) : (Str
       } else if ("quoted-printable" == contentTransferEncoding) {
             textBody = String.fromUtf8(parseQuotedPrintableMailContent(textBody))
       }
+      let text = MimeText(textBody, contentTypeMime)
       return (from, to, cc, bcc, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
+      let mimeMutilParts = MimeMutilParts()
+      mimeMutilParts.contentType = contentTypeMime
+      mimeMutilParts.contentId = contentId
+      mimeMutilParts.headers = headers
+      if (onlyHeaders) {
+         return (from, to, cc, bcc, subject, mimeMutilParts)
+      }
       if (boundary == "") {
             throw MailContentParseException("multipart missing boundary", contentType)
       }
@@ -280,10 +313,6 @@ public func parseMailContent(content: String, isPartEntry!: Bool = false) : (Str
       while (!line.startsWith("--${boundary}")) {
             line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely not found boundary")})
       }
-      let mimeMutilParts = MimeMutilParts()
-      mimeMutilParts.contentType = contentTypeMime
-      mimeMutilParts.contentId = contentId
-      mimeMutilParts.headers = headers
       // blank content
       if (line == "--${boundary}--") {
             return (from, to,  cc, bcc, subject, mimeMutilParts)
@@ -308,6 +337,9 @@ public func parseMailContent(content: String, isPartEntry!: Bool = false) : (Str
    } else if (contentType == ""){
       return (from, to, cc, bcc, subject, content)
    } else {
+      if (onlyHeaders) {
+         return (from, to, cc, bcc, subject, MimeFile("".toArray(), contentTypeMime))
+      }
       var textBody = ""
       while(let Some(line) <- lines.next()) {
             textBody += line + "\r\n"
