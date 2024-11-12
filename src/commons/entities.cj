@@ -64,6 +64,10 @@ public open class Mail {
 
 extend Mail <: ToString {
    public func toString(): String {
+      if (this is ImapReceiveMail) {
+         let mail = (this as ImapReceiveMail).getOrThrow()
+         return "ImapReceiveMail(mailFrom=${mail.mailFrom}, rcptTo=${mail.rcptTo}, cc=${mail.cc}, bcc=${mail.bcc}, subject=${mail.subject}, data=${mail.data})"
+      }
       "Mail(mailFrom=${mailFrom}, rcptTo=${rcptTo}, cc=${cc}, bcc=${bcc}, subject=${subject}, data=${data})"
    }
 }
@@ -77,7 +81,6 @@ public class ImapReceiveMail <: ReceiveMail {
    public var size: Int64
    public var flags: ArrayList<String>
    public var messageId: String
-   public var contentType: String
    public init() {
       super()
       idx = -1
@@ -85,7 +88,6 @@ public class ImapReceiveMail <: ReceiveMail {
       size = -1
       flags = ArrayList()
       messageId = ""
-      contentType = ""
    }
 }
 
