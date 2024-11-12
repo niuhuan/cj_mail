@@ -1,8 +1,10 @@
 package cj_mail.commons
 
-import cj_lombok.*
+import std.collection.*
 
 public abstract class MailException <: Exception {
+    public var lines = ArrayList<String>()
+
     public init() {
         super()
     }
@@ -10,17 +12,28 @@ public abstract class MailException <: Exception {
     public init(message: String) {
         super(message)
     }
+
+    public init(
+        message: String,
+        line1: String
+    ) {
+        super(message)
+        lines.append(line1)
+    }
+
+    public init(
+        message: String,
+        line1: String,
+        line2: String
+    ) {
+        super(message)
+        lines.append(line1)
+        lines.append(line2)
+    }
+
 }
 
 public class MailContentParseException <: MailException & ToString{
-
-    private var _line: String = ""
-
-    public prop line: String {
-        get () {
-            _line
-        }
-    }
 
     public init() {
         super()
@@ -31,17 +44,20 @@ public class MailContentParseException <: MailException & ToString{
     }
 
     public init(message: String, line: String) {
-        super(message)
-        _line = line
+        super(message, line)
     }
 
     public override func toString(): String {
         var msg = "MailContentParseException: ${message}"
-        if (_line != "") {
-            msg += "\n${_line}"
+        if (!lines.isEmpty()) {
+            for (line in lines) {
+                msg += " : "
+                msg += line
+            }
         }
         msg 
     }
+
 }
 
 public class MailConnectExcption <: MailException & ToString {

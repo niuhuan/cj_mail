@@ -23,6 +23,7 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 | SMTP | https://datatracker.ietf.org/doc/html/rfc5321 |
 | POP | https://datatracker.ietf.org/doc/html/rfc1939 |
 | IMAP | https://datatracker.ietf.org/doc/html/rfc3501 |
+| SubTypes | https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html |
 
 - [x] SMTP
     - [x] 基础认证
@@ -68,9 +69,9 @@ main(): Int64 {
 
 func textMail(): SendMail {
    let mail = SendMail()
-   mail.mailFrom.name = "niuhuan"
-   mail.mailFrom.address = "niuhuan@mail.com"
-   mail.rcptTo = [MailAddress("niuhuan", "niuhuan@mail.com")]
+   mail.from.name = "niuhuan"
+   mail.from.address = "niuhuan@mail.com"
+   mail.to = [MailAddress("niuhuan", "niuhuan@mail.com")]
    mail.data = "Hello, World!"
    // mail.data = MimeText("<h1>Hello, World!</h1>","text/html") // html渲染
    mail
@@ -79,9 +80,9 @@ func textMail(): SendMail {
 // 多分段带附件的邮件
 func mutilPartsMail(): SendMail {
    let mail = SendMail()
-   mail.mailFrom.name = "niuhuan"
-   mail.mailFrom.address = "niuhuan@mail.com"
-   mail.rcptTo = ArrayList([MailAddress("niuhuan", "niuhuan@mail.com")])
+   mail.from.name = "niuhuan"
+   mail.from.address = "niuhuan@mail.com"
+   mail.to = ArrayList([MailAddress("niuhuan", "niuhuan@mail.com")])
    let content = MimeMutilParts()
    // html 渲染邮件内容
    content.append(MimeText("<h1>Hello, World!</h1>","text/html")) 
@@ -145,10 +146,8 @@ main(): Int64 {
 
 #### 计划中的特性
 
-- [ ] 自定义socket连接
 - [ ] 附件输入流的方式读取
-- [ ] IMAP 解析混合附件主要类型
-- [ ] [Subtypes for rfc1341](https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html) 以及嵌套 alternative
+- [ ] `Content-ID` 以及 字符集
 
 ## 📕 协议
 

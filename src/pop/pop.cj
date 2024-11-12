@@ -160,10 +160,10 @@ public class Pop {
         
         let mail = ReceiveMail()
         if (from != "") {
-            mail.mailFrom = parseMailAddress(from)
+            mail.from = parseMailAddress(from)
         }
         if (to != "") {
-            mail.rcptTo = parseMailAddresses(to)
+            mail.to = parseMailAddresses(to)
         }
         if (cc != "") {
             mail.cc = parseMailAddresses(cc)

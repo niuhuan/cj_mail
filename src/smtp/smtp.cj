@@ -113,15 +113,15 @@ public class Smtp {
    }
 
    public func send(mail: SendMail) {
-      writeCommand("MAIL FROM:<${mail.mailFrom.address}>")
+      writeCommand("MAIL FROM:<${mail.from.address}>")
       readCommand()
-      for (rcpt in mail.rcptTo) {
+      for (rcpt in mail.to) {
          writeCommand("RCPT TO:<${rcpt.address}>")
          readCommand()
       }
       writeCommand("DATA")
       readCommand()
-      putMailData(mail.mailFrom, mail.rcptTo, mail.cc, mail.bcc, mail.subject, mail.data)
+      putMailData(mail.from, mail.to, mail.cc, mail.bcc, mail.subject, mail.data)
       writeCommand(".")
       writeCommand("")
       readCommand()
