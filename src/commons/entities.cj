@@ -111,16 +111,35 @@ public class MimeText <: MailContent {
         this.contentType = contentType
      }
 
+     public init(text: String, contentType: String, contentId: String, headers: ArrayList<(String, String)>){
+        this.text = text
+        this.contentType = contentType
+        this.contentId = contentId
+        this.headers = headers
+     }
+
      public func toString(): String {
-         "MimeText(contentType=${contentType}, size=${text.size}, text=${text})"
+         let builder = StringBuilder("MimeText(contentType=${contentType}, text=${text}")
+         if (contentId != "") {
+            builder.append(", contentId=${contentId}")
+         }
+         if (headers.size > 0) {
+            builder.append(", headers=(")
+            for (header in headers) {
+               builder.append("${header[0]}=${header[1]}, ")
+            }
+            builder.append(")")
+         }
+         builder.append(")")
+         builder.toString()
      }
 }
 
 @Default
 public class MimeFile <: MailContent {
      public var data: Array<Byte>
-     public var contentId: String
      public var contentType: String
+     public var contentId: String
      public var fileName: String
      public var headers: ArrayList<(String, String)>
 
@@ -129,18 +148,27 @@ public class MimeFile <: MailContent {
         this.contentType = contentType
      }
 
-     public init(data: Array<Byte>, contentType: String, headers: ArrayList<(String, String)>) {
+     public init(data: Array<Byte>, contentType: String, contentId: String, headers: ArrayList<(String, String)>) {
         this.data = data
         this.contentType = contentType
+        this.contentId = contentId
         this.headers = headers
      }
 
-     public func addHeader(name: String, value: String) {
-        headers.append((name, value))
-     }
-
      public func toString(): String {
-         "MimeFile(contentType=${contentType}, size=${data.size})"
+         let builder = StringBuilder("MimeFile(contentType=${contentType}, data={${data.size}}")
+         if (contentId != "") {
+            builder.append(", contentId=${contentId}")
+         }
+         if (headers.size > 0) {
+            builder.append(", headers=(")
+            for (header in headers) {
+               builder.append("${header[0]}=${header[1]}, ")
+            }
+            builder.append(")")
+         }
+         builder.append(")")
+         builder.toString()
      }
 }
 
@@ -271,15 +299,15 @@ public func parseMailContent(
    // todo ?q? quopri
    // parse mime
    if (contentType == ""){
-      let textBody = StringBuilder()
+      var textBody = StringBuilder()
       while(let Some(line) <- lines.next()) {
          textBody.append(line)
          textBody.append("\r\n")
       }
       let mc: MailContent = if ("base64" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseBase64MailContent(textBody.toString()), "application/octet-stream").toString()
+            MimeFile(parseBase64MailContent(textBody.toString()), "application/octet-stream", contentId, headers).toString()
       } else if ("quoted-printable" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseQuotedPrintableMailContent(textBody.toString()), "application/octet-stream").toString()
+            MimeFile(parseQuotedPrintableMailContent(textBody.toString()), "application/octet-stream", contentId, headers).toString()
       } else {
          textBody.toString()
       }
@@ -311,7 +339,7 @@ public func parseMailContent(
    // parse body
    if (contentTypeMime.toAsciiLower().startsWith("text/")) {
       if (onlyHeaders) {
-         return (from, to, cc, bcc, subject, MimeText("", contentTypeMime))
+         return (from, to, cc, bcc, subject, MimeText("", contentTypeMime, contentId, headers))
       }
       var textBody = ""
       while(let Some(line) <- lines.next()) {
@@ -322,7 +350,7 @@ public func parseMailContent(
       } else if ("quoted-printable" == contentTransferEncoding.toAsciiLower()) {
             textBody = String.fromUtf8(parseQuotedPrintableMailContent(textBody))
       }
-      let text = MimeText(textBody, contentTypeMime)
+      let text = MimeText(textBody, contentTypeMime, contentId, headers)
       return (from, to, cc, bcc, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
       let mimeMutilParts = MimeMutilParts()
@@ -386,18 +414,18 @@ public func parseMailContent(
       return (from, to,  cc, bcc, subject, mimeMutilParts)
    } else {
       if (onlyHeaders) {
-         return (from, to, cc, bcc, subject, MimeFile("".toArray(), contentTypeMime))
+         return (from, to, cc, bcc, subject, MimeFile("".toArray(), contentTypeMime, contentId, headers))
       }
       var textBody = ""
       while(let Some(line) <- lines.next()) {
             textBody += line + "\r\n"
       }
       let file = if ("base64" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseBase64MailContent(textBody), contentTypeMime)
+            MimeFile(parseBase64MailContent(textBody), contentTypeMime, contentId, headers)
       } else if ("quoted-printable" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseQuotedPrintableMailContent(textBody), contentTypeMime)
+            MimeFile(parseQuotedPrintableMailContent(textBody), contentTypeMime, contentId, headers)
       } else {
-            MimeFile(textBody.toArray(), contentTypeMime)
+            MimeFile(textBody.toArray(), contentTypeMime, contentId, headers)
       }
       file.headers = headers
       file.contentId = contentId
