@@ -38,13 +38,14 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `LIST` 列出邮件
     - [x] `RETR` 读取邮件
     - [x] `DELE` 删除邮件
-    - [x] parse邮件使得可读性更好
+    - [x] `retrParse` 获取邮件内容并解析
 - [x] IMAP
     - [x] `LOGIN` 登录
     - [x] `SELECT` 获取收件箱邮件数量
     - [x] `SEARCH` 搜索邮件、返回UID列表
     - [x] `FETCH` 获取邮件内容
     - [x] `fetchParse` 获取邮件内容并解析
+    - [x] `fetchInfo` 获取邮件内容并解析（不包含邮件正文）
 
 ## 🔖 用例
 
@@ -140,6 +141,12 @@ main(): Int64 {
 }
 ```
 
+### 经过验证的仓颉版本
+
+| 版本 | 分支 | 
+| -- | -- |
+| 0.53.13 | main |
+
 ## 🏆 贡献
 
 欢迎您的issue和pull request, fork时请保留源仓库地址
@@ -147,7 +154,6 @@ main(): Int64 {
 #### 计划中的特性
 
 - [ ] 附件输入流的方式读取
-- [ ] 字符集解析
 
 ## 📕 协议
 

@@ -4,6 +4,7 @@ import std.collection.*
 import std.io.*
 import std.regex.*
 import cj_lombok.*
+import charset4cj.charset.*
 import encoding.base64.*
 import log.*
 
@@ -345,11 +346,7 @@ public func parseMailContent(
       while(let Some(line) <- lines.next()) {
             textBody += line + "\r\n"
       }
-      if ("base64" == contentTransferEncoding.toAsciiLower()) {
-            textBody = String.fromUtf8(parseBase64MailContent(textBody))
-      } else if ("quoted-printable" == contentTransferEncoding.toAsciiLower()) {
-            textBody = String.fromUtf8(parseQuotedPrintableMailContent(textBody))
-      }
+      textBody = decodeTextBody(textBody, charset, contentTransferEncoding)
       let text = MimeText(textBody, contentTypeMime, contentId, headers)
       return (from, to, cc, bcc, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
@@ -459,29 +456,58 @@ public func parseQuotedPrintableMailContent(content: String): Array<Byte> {
    builder.bytes()
 }
 
+let subjectEncodeRegexp = Regex("=\\?([a-zA-Z0-9\\-]+)\\?([bqBQ])\\?([^\\?]+)\\?=")
+
 func decodeSubject(subjectInput: String): String {
-   if (subjectInput == "") {
-      return ""
-   }
    var subject = subjectInput
-   if (subject.startsWith("=?") && subject.endsWith("?=")) {
+   if (subject == "") {
+      ""
+   } else if (subject.startsWith("=?") && subject.endsWith("?=")) {
       let builder = StringBuilder()
       let sp = subject.split("\n")
       for (spItem in sp) {
          let item = spItem.trimAscii()
-         if (item.toAsciiLower().startsWith("=?utf-8?b?") && item.endsWith("?=")) {
-            let encoded = item[10..item.size-2]
-            builder.append(String.fromUtf8(parseBase64MailContent(encoded)))
-         } else if (item.toAsciiLower().startsWith("=?utf-8?q?") && item.endsWith("?=")) {
-            let encoded = item[10..item.size-2]
-            builder.append(String.fromUtf8(parseQuotedPrintableMailContent(encoded)))
+         if (let Some(matches) <- subjectEncodeRegexp.matches(item)) {
+            let charset = matches.matchStr(1)
+            let encoding = matches.matchStr(2)
+            let text = matches.matchStr(3)
+            let bytes = if (encoding.toAsciiLower() == "b") {
+               parseBase64MailContent(text)
+            } else if (encoding.toAsciiLower() == "q") {
+               parseQuotedPrintableMailContent(text)
+            } else {
+               builder.append(item)
+               continue
+            }
+            if (let Some(charsetInstance) <- Charsets.forName(charset)) {
+               builder.append(charsetInstance.newDecoder().decode(bytes))
+               continue
+            } else {
+               builder.append(item)
+               continue
+            }
          } else {
             builder.append(item)
          }
       }
-      return builder.toString()
+      builder.toString()
    } else {
-      return subject
+      subject
+   }
+}
+
+func decodeTextBody(textBody: String, charset: String, contentTransferEncoding: String): String {
+   let bytes = if ("base64" == contentTransferEncoding.toAsciiLower()) {
+         parseBase64MailContent(textBody)
+   } else if ("quoted-printable" == contentTransferEncoding.toAsciiLower()) {
+         parseQuotedPrintableMailContent(textBody)
+   } else {
+      return textBody
+   }
+   if (let Some(charsetInstance) <- Charsets.forName(charset)) {
+      charsetInstance.newDecoder().decode(bytes)
+   } else {
+      textBody
    }
 }
 
