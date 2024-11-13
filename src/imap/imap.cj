@@ -186,6 +186,34 @@ public class Imap {
         fetchInfo(None)
     }
 
+    public func store(
+        sequenceSet: Option<String>,
+        storeType: StoreType,
+        flags: ArrayList<String>,
+        withUid: Bool
+    ): ArrayList<ImapReceiveMail> {
+        let idx = nextCmdIdx()
+        let sequenceSetValue = match (sequenceSet) {
+            case Some(value) => value
+            case _ => "1:*" 
+        }
+        let uidStr = if (withUid) {
+            "UID "
+        } else {
+            ""
+        }
+        let flagsCmd = StringBuilder()
+        for (flag in flags) {
+            if (flagsCmd.size > 0) {
+                flagsCmd.append(" ")
+            }
+            flagsCmd.append("${flag}")
+        }
+        let command = "${idx} ${uidStr}STORE ${sequenceSetValue} ${storeType} (${flagsCmd})"
+        writeCommand(command)
+        parseImapMailResponses(idx, readCommand(idx))
+    }
+
     public func list(referenceName: String, mailboxName: String): String {
         let idx = nextCmdIdx();
         writeCommand("${idx} LIST \"${escapingDoubleQuote(referenceName)}\" \"${escapingDoubleQuote(mailboxName)}\"")
@@ -480,6 +508,8 @@ public func imapReaderFlags(reader: StreamReader): ArrayList<String> {
             }
         } else if (rune == r" ") {
             takeFlag()
+        } else {
+            builder.append(rune)
         }
     }
     list

@@ -64,12 +64,38 @@ public open class Mail {
 }
 
 extend Mail <: ToString {
+
    public func toString(): String {
+      toString(ignoreBody: false)
+   }
+
+   public func toString(ignoreBody!: Bool = false): String {
       if (this is ImapReceiveMail) {
          let mail = (this as ImapReceiveMail).getOrThrow()
-         return "ImapReceiveMail(idx=${mail.idx}, uid=${mail.uid}, from=${mail.from}, to=${mail.to}, cc=${mail.cc}, bcc=${mail.bcc}, subject=${mail.subject}, data=${mail.data})"
+         let builder = StringBuilder("ImapReceiveMail(idx=${mail.idx}, uid=${mail.uid}, from=${mail.from}, to=${mail.to}")
+         if (mail.cc.size > 0) {
+            builder.append(", cc=${mail.cc}")
+         }
+         if (mail.bcc.size > 0) {
+            builder.append(", bcc=${mail.bcc}")
+         }
+         if (mail.flags.size > 0) {
+            builder.append(", flags=${mail.flags}")
+         }
+         builder.append(", subject=${mail.subject}")
+         if (!ignoreBody) {
+            builder.append(", data=${mail.data}")
+         }
+         builder.append(")")
+         return builder.toString()
+      } else {
+         let builder =StringBuilder("Mail(from=${from}, to=${to}, cc=${cc}, bcc=${bcc}, subject=${subject}, ")
+         if (!ignoreBody) {
+            builder.append(", data=${data}")
+         }
+         builder.append(")")
+         return builder.toString()
       }
-      "Mail(from=${from}, to=${to}, cc=${cc}, bcc=${bcc}, subject=${subject}, data=${data})"
    }
 }
 

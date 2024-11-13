@@ -28,3 +28,31 @@ public func parseMailBoxState(content: String): MailboxState {
     }
     MailboxState(exists, recent)
 }
+
+public enum StoreType <: ToString {
+    | SetFlags
+    | AddFlags
+    | RemoveFlags
+    | SetFlagsSilent
+    | AddFlagsSilent
+    | RemoveFlagsSilent
+
+    public func toString(): String {
+        match (this) {
+            case SetFlags =>
+                "FLAGS"
+            case AddFlags =>
+                "+FLAGS"
+            case RemoveFlags =>
+                "-FLAGS"
+            case SetFlagsSilent =>
+                "FLAGS.SILENT"
+            case AddFlagsSilent =>
+                "+FLAGS.SILENT"
+            case RemoveFlagsSilent =>
+                "-FLAGS.SILENT"
+        }
+    }
+}
+
+

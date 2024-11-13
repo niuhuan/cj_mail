@@ -44,6 +44,7 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `SELECT` 获取收件箱邮件数量
     - [x] `SEARCH` 搜索邮件、返回UID列表
     - [x] `FETCH` 获取邮件内容
+    - [x] `STORE` 增改标记（例如已读标记）
     - [x] `fetchParse` 获取邮件内容并解析
     - [x] `fetchInfo` 获取邮件内容并解析（不包含邮件正文）
 
