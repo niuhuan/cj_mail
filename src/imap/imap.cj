@@ -122,24 +122,6 @@ public class Imap {
         parseMailBoxState(readCommand(idx))
     }
 
-    private func parseMailBoxState(content: String): MailboxState {
-        var existsRegex = Regex("\\* (\\d+) EXISTS")
-        var exists = match (existsRegex.matcher(content).find()) {
-            case Some(s) =>
-                Int64.parse(s.matchStr(1))
-            case None =>
-                0
-        }
-        var recentRegex = Regex("\\* (\\d+) RECENT")
-        var recent = match (recentRegex.matcher(content).find()) {
-            case Some(s) =>
-                Int64.parse(s.matchStr(1))
-            case None =>
-                0
-        }
-        MailboxState(exists, recent)
-    }
-
     public func search(criteria: String): ArrayList<Int64> {
         let idx = nextCmdIdx();
         var command = "${idx} SEARCH \"${escapingDoubleQuote(criteria)}\""
@@ -171,16 +153,6 @@ public class Imap {
         let command = "${idx} ${uidStr}FETCH ${sequenceSetValue} ${dataItems}"
         writeCommand(command)
         (idx, readCommand(idx))
-    }
-
-    public func quit() {
-        let idx = nextCmdIdx();
-        writeCommand("${idx} LOGOUT")
-        readCommand(idx)
-    }
-
-    public func disconnect() {
-        this.connection.getOrThrow().disconnect()
     }
 
     public func fetchParse(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
@@ -220,10 +192,20 @@ public class Imap {
         readCommand(idx)
     }
 
-    private func escapingDoubleQuote(str: String): String {
-        str.replace("\"", "\\\"")
+    public func quit() {
+        let idx = nextCmdIdx();
+        writeCommand("${idx} LOGOUT")
+        readCommand(idx)
     }
 
+    public func disconnect() {
+        this.connection.getOrThrow().disconnect()
+    }
+
+}
+
+private func escapingDoubleQuote(str: String): String {
+    str.replace("\"", "\\\"")
 }
 
 private func parseImapMailResponses(idx: String, response: String, skipHeaders!: Bool = false): ArrayList<ImapReceiveMail> {

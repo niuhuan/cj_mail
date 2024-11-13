@@ -1,5 +1,6 @@
 package cj_mail.imap
 
+import std.regex.*
 import cj_lombok.*
 
 @Default
@@ -8,4 +9,22 @@ import cj_lombok.*
 public struct MailboxState {
     public var exists: Int64
     public var recent: Int64
+}
+
+public func parseMailBoxState(content: String): MailboxState {
+    var existsRegex = Regex("\\* (\\d+) EXISTS")
+    var exists = match (existsRegex.matcher(content).find()) {
+        case Some(s) =>
+            Int64.parse(s.matchStr(1))
+        case None =>
+            0
+    }
+    var recentRegex = Regex("\\* (\\d+) RECENT")
+    var recent = match (recentRegex.matcher(content).find()) {
+        case Some(s) =>
+            Int64.parse(s.matchStr(1))
+        case None =>
+            0
+    }
+    MailboxState(exists, recent)
 }
