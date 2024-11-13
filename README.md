@@ -37,16 +37,20 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
     - [x] `STAT` 获取邮件数
     - [x] `LIST` 列出邮件
     - [x] `RETR` 读取邮件
+        - [x] `retr` 获取文件
+        - [x] `retrParse` 获取邮件内容并解析
     - [x] `DELE` 删除邮件
-    - [x] `retrParse` 获取邮件内容并解析
 - [x] IMAP
     - [x] `LOGIN` 登录
     - [x] `SELECT` 获取收件箱邮件数量
     - [x] `SEARCH` 搜索邮件、返回UID列表
     - [x] `FETCH` 获取邮件内容
-    - [x] `STORE` 增改标记（例如已读标记）
-    - [x] `fetchParse` 获取邮件内容并解析
-    - [x] `fetchInfo` 获取邮件内容并解析（不包含邮件正文）
+        - [x] `fetchRaw` 执行`FETCH`获取邮件内容
+        - [x] `fetchInfo` 获取邮件内容并解析（不包含邮件正文）
+        - [x] `fetchFull` 获取邮件内容并解析 (包含邮件正文、正文：文本、附件)
+    - [x] `STORE` 增改标记（例如已读标记、删除标记、旗帜标记）
+    - [x] `MOVE` 移动到其他文件夹
+
 
 ## 🔖 用例
 
@@ -131,12 +135,10 @@ main(): Int64 {
     imap.connect()
     imap.login("niuhuan@mail.com", "password")
     imap.select("INBOX")
-    // 查询邮件, 或者下载邮件
-    let mails = imap.fetch("1:10", "FULL")
-    // 下载邮件并解析
-    let mails = imap.fetchParse("1:10")
-    for ((uid, mail) in mails) { 
-        println("uid : ${uid}, mail : ${mail}")
+    // 列出收件箱中的邮件
+    let mails = imap.fetchInfo("1:*")
+    for (mail in mails) { 
+        println("mail : ${mail}")
     }
     0
 }

@@ -118,7 +118,7 @@ public class Imap {
 
     public func examine(mailbox: String): MailboxState {
         let idx = nextCmdIdx();
-        writeCommand("${idx} EXAMINE ${mailbox}")
+        writeCommand("${idx} EXAMINE \"${mailbox}\"")
         parseMailBoxState(readCommand(idx))
     }
 
@@ -139,7 +139,7 @@ public class Imap {
         result
     }
 
-    public func fetch(sequenceSet: Option<String>, dataItems: String, withUid: Bool): (String, String) {
+    public func fetchRaw(sequenceSet: Option<String>, dataItems: String, withUid: Bool): (String, String) {
         let idx = nextCmdIdx()
         let sequenceSetValue = match (sequenceSet) {
             case Some(value) => value
@@ -155,22 +155,22 @@ public class Imap {
         (idx, readCommand(idx))
     }
 
-    public func fetchParse(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
+    public func fetchFull(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
         let mails = ArrayList<(Int64, ReceiveMail)>()
-        let (idx, response) = fetch(sequenceSet, "(UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])", withUid)
+        let (idx, response) = fetchRaw(sequenceSet, "(UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])", withUid)
         parseImapMailResponses(idx, response, skipHeaders: true)
     }
 
-    public func fetchParse(sequenceSet: Option<String>): ArrayList<ImapReceiveMail> {
-        fetchParse(sequenceSet, false)
+    public func fetchFull(sequenceSet: Option<String>): ArrayList<ImapReceiveMail> {
+        fetchFull(sequenceSet, false)
     }
 
-    public func fetchParse(): ArrayList<ImapReceiveMail> {
-        fetchParse(None)
+    public func fetchFull(): ArrayList<ImapReceiveMail> {
+        fetchFull(None)
     }
 
     public func fetchInfo(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
-        let (idx, response) = fetch(
+        let (idx, response) = fetchRaw(
             sequenceSet, 
             "(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Content-Type)])",
             withUid
@@ -212,6 +212,22 @@ public class Imap {
         let command = "${idx} ${uidStr}STORE ${sequenceSetValue} ${storeType} (${flagsCmd})"
         writeCommand(command)
         parseImapMailResponses(idx, readCommand(idx))
+    }
+
+    public func move(sequenceSet: Option<String>, mailboxName: String, withUid: Bool) {
+        let idx = nextCmdIdx()
+        let sequenceSetValue = match (sequenceSet) {
+            case Some(value) => value
+            case _ => "1:*" 
+        }
+        let uidStr = if (withUid) {
+            "UID "
+        } else {
+            ""
+        }
+        let command = "${idx} ${uidStr}MOVE ${sequenceSetValue} \"${escapingDoubleQuote(mailboxName)}\""
+        writeCommand(command)
+        readCommand(idx)
     }
 
     public func list(referenceName: String, mailboxName: String): String {
@@ -444,7 +460,7 @@ private func imapReaderNumber(reader: StreamReader): (Int64, Bool) {
 private func matchRunes(runes: String, reader: StreamReader) {
     for(rune in runes.runes()) {
         if (rune != reader.readRune().getOrThrow({=>MailConnectExcption()})) {
-            throw MailConnectExcption()
+            throw MailConnectExcption("not match rune")
         }
     }
 }
