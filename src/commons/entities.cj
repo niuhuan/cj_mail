@@ -457,7 +457,7 @@ public func parseMailContent(
 }
 
 public func parseBase64MailContent(content: String): Array<Byte> {
-   fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow({=>MailContentParseException("Invalid base64 content", "content")})
+   fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow({=>MailContentParseException("Invalid base64 content", content)})
 }
 
 public func parseQuotedPrintableMailContent(content: String): Array<Byte> {

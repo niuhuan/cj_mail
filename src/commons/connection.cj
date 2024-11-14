@@ -167,8 +167,7 @@ public func defaultTlsConnect(host: String, port: UInt16): MailConnection {
     socket.connect()
     let tls = try {
     var config = TlsClientConfig()
-        config.verifyMode = TrustAll
-        config.alpnProtocolsList = ["h2"]
+        config.domain = host
         TlsSocket.client(socket, clientConfig: config)
     } catch (e: Exception) {
         socket.close()
