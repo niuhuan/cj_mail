@@ -3,6 +3,7 @@ package cj_mail.commons
 import std.collection.*
 import std.socket.*
 import std.io.*
+import std.time.*
 import net.tls.*
 
 import cj_lombok.*
@@ -160,24 +161,26 @@ public class StreamReader {
 }
 
 public func defaultTlsConnect(host: String, port: UInt16): MailConnection {
-      let socket = TcpSocket(host, port)
-      socket.connect()
-      let tls = try {
-        var config = TlsClientConfig()
+    let socket = TcpSocket(host, port)
+    socket.writeTimeout = Duration.second * 30
+    socket.readTimeout = Duration.second * 30
+    socket.connect()
+    let tls = try {
+    var config = TlsClientConfig()
         config.verifyMode = TrustAll
         config.alpnProtocolsList = ["h2"]
         TlsSocket.client(socket, clientConfig: config)
-      } catch (e: Exception) {
+    } catch (e: Exception) {
         socket.close()
         throw e
-      }
-      try {
-          tls.handshake()
-      }catch (e: Exception) {
+    }
+    try {
+        tls.handshake()
+    }catch (e: Exception) {
         tls.close()
         throw e
-      }
-      MailConnection(tls)
+    }
+    MailConnection(tls)
 }
 
 public func mailConnection(socket: StreamingSocket) {
