@@ -5,25 +5,24 @@ import std.socket.*
 import std.io.*
 import std.time.*
 import net.tls.*
+import compress.zlib.*
 
 import cj_lombok.*
 
 public class MailConnection {
 
-    public var socket: StreamingSocket
+    private var socket: StreamingSocket
     public var reader: StreamReader 
+    public var writer: StreamWriter
 
     public init(socket: StreamingSocket) {
         this.socket = socket
         this.reader = StreamReader(socket)
+        this.writer = StreamWriter(socket)
     }
 
     public func disconnect() {
         socket.close()
-    }
-
-    public func write(content: String) {
-        socket.write(content.toArray())
     }
 
     public func flush() {
@@ -39,10 +38,14 @@ public class StreamReader {
     var writeToBuffPosition = 0
     var readToBuffPosition = 0
 
-    var socket: InputStream
+    var inputStream: InputStream
 
     public init(socket: InputStream) {
-        this.socket = socket
+        this.inputStream = socket
+    }
+
+    public func deflate() {
+        inputStream = DecompressInputStream(inputStream, wrap: DeflateFormat)
     }
 
     public func readln(): ?String {
@@ -66,7 +69,7 @@ public class StreamReader {
                 case None =>
                     builder.appendAll(readBuff[readToBuffPosition..writeToBuffPosition])
                     readToBuffPosition = 0
-                    writeToBuffPosition = socket.read(readBuff)
+                    writeToBuffPosition = inputStream.read(readBuff)
                     if (writeToBuffPosition == 0) {
                         if (builder.size == 0) {
                             return Option<String>.None
@@ -87,7 +90,7 @@ public class StreamReader {
                 return readBuff[readToBuffPosition - 1]
             } else if (readToBuffPosition == writeToBuffPosition) {
                 readToBuffPosition = 0
-                writeToBuffPosition = socket.read(readBuff)
+                writeToBuffPosition = inputStream.read(readBuff)
                 if (writeToBuffPosition == 0) {
                     return Option<Byte>.None
                 }
@@ -156,6 +159,35 @@ public class StreamReader {
             throw MailContentParseException("invalid utf8")
         }
         ra[0]
+    }
+
+}
+
+public class StreamWriter <: OutputStream{
+
+    var writeBuff = Array<Byte>(8192, {_=>0})
+    var writeBuffPosition = 0
+
+    var outputStream: OutputStream
+
+    public init(socket: OutputStream) {
+        this.outputStream = socket
+    }
+
+    public func deflate() {
+        outputStream = CompressOutputStream(outputStream, wrap: DeflateFormat)
+    }
+    
+    public func write(buffer: Array<UInt8>) : Unit {
+        outputStream.write(buffer)
+    }
+
+    public func write(content: String) {
+        outputStream.write(content.toArray())
+    }
+
+    public func flush() {
+        outputStream.flush()
     }
 
 }

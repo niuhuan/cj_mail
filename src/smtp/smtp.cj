@@ -27,7 +27,7 @@ public class Smtp {
    }
 
    private func writeCommand(command: String) {
-      let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
+      let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
       logger.trace("C: ${command}")
       writer.write(command)
       writer.write("\r\n")
