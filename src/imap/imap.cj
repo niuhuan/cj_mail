@@ -25,10 +25,9 @@ public class Imap {
 
     public var host: String =  ""
     public var tlsPort: UInt16 = 993
-
     public var connection: ?MailConnection = None
-    
     private var cmdIdx = 0;
+    // private var inDeflate = false
 
     public func nextCmdIdx() {
         cmdIdx += 1
@@ -245,6 +244,19 @@ public class Imap {
     public func disconnect() {
         this.connection.getOrThrow().disconnect()
     }
+
+    // public func deflate() {
+    //     if (inDeflate) {
+    //         throw MailConnectExcption("Already in deflate mode")
+    //     }
+    //     let idx = nextCmdIdx();
+    //     writeCommand("${idx} COMPRESS DEFLATE")
+    //     readCommand(idx)
+    //     let conn = this.connection.getOrThrow({=>MailConnectExcption("Not connected")})
+    //     conn.reader.deflate()
+    //     conn.writer.deflate()
+    //     inDeflate = true
+    // }
 
 }
 

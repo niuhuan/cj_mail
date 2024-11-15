@@ -44,9 +44,9 @@ public class StreamReader {
         this.inputStream = socket
     }
 
-    public func deflate() {
-        inputStream = DecompressInputStream(inputStream, wrap: DeflateFormat)
-    }
+    // public func deflate() {
+    //     inputStream = DecompressInputStream(inputStream, wrap: DeflateFormat, bufLen: 1)
+    // }
 
     public func readln(): ?String {
         let builder = ArrayList<Byte>()
@@ -174,9 +174,9 @@ public class StreamWriter <: OutputStream{
         this.outputStream = socket
     }
 
-    public func deflate() {
-        outputStream = CompressOutputStream(outputStream, wrap: DeflateFormat)
-    }
+    // public func deflate() {
+    //     outputStream = CompressOutputStream(outputStream, wrap: DeflateFormat, bufLen: 1)
+    // }
     
     public func write(buffer: Array<UInt8>) : Unit {
         outputStream.write(buffer)
