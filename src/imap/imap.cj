@@ -16,7 +16,6 @@ public class ImapException <: MailException {
    public var response: String
 }
 
-
 let fetchRegex = Regex("^\\* \\d+ FETCH [\\S\\s]+ \\{(\\d+)\\}$")
 
 public class Imap {

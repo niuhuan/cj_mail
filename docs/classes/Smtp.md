@@ -1,4 +1,5 @@
 Class Smtp
+==========
 
 ## 用例
 
@@ -48,8 +49,9 @@ func mutilPartsMail(): SendMail {
 ## 成员函数
 
 | 函数 | 说明 |
-| -- | -- |
+| -- | :-- |
+| connect | 连接
+| disconnect | 断开链接
 | plain | `PLAIN` 方式认证
 | login | `LOGIN` 方式认证
 | quit | `QUIT` 命令（不是所有服务器都支持）
-| disconnect | 断开链接

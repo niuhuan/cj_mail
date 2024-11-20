@@ -27,15 +27,15 @@ public class Pop {
 
    public var connection: ?MailConnection = None
 
-   public func connect() {
-      this.connection = defaultTlsConnect(host, tlsPort)
-      readCommand() // Server Hello
-   }
+    public func connect() {
+        this.connection = defaultTlsConnect(host, tlsPort)
+        readCommand() // Server Hello
+    }
 
-   public func connect(socket: StreamingSocket) {
-      this.connection = mailConnection(socket)
-      readCommand() // Server Hello
-   }
+    public func connect(socket: StreamingSocket) {
+        this.connection = mailConnection(socket)
+        readCommand() // Server Hello
+    }
 
     public func noop() {
         writeCommand("NOOP")
@@ -57,7 +57,7 @@ public class Pop {
         line
     }
 
-   public func writeCommand(command: String) {
+    public func writeCommand(command: String) {
         let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
         logger.trace("C: ${command}")
         writer.write(command)

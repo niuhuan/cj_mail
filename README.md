@@ -56,6 +56,8 @@ func textMail(): SendMail {
 
 ### POP
 
+[文档](docs/classes/Pop.md)
+
 连接POP3服务器并读取邮件
 
 ```cangjie
@@ -77,6 +79,8 @@ main() : Int64{
 
 ### IMAP
 
+[文档](docs/classes/Imap.md)
+
 ```cangjie
 main(): Int64 {
     let imap = Imap()
@@ -95,6 +99,8 @@ main(): Int64 {
 ```
 
 ### Base64
+
+[文档](docs/classes/Base64.md)
 
 ```cangjie
 main(): Int64 {
