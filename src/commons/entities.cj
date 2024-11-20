@@ -7,7 +7,7 @@ import cj_lombok.*
 import charset4cj.charset.*
 import log.*
 import cj_mail.encoding.base64.*
-
+import cj_mail.exception.*
 
 let logger = getGlobalLogger(("cj_mail", "Parser"))
 let mailAddressPattern = Regex("^(.*)?<(.*)>$")
@@ -133,12 +133,7 @@ public class MimeText <: MailContent {
      public var contentId: String = ""
      public var headers: ArrayList<(String, String)> = ArrayList()
 
-     public init(text: String, contentType: String) {
-        this.text = text
-        this.contentType = contentType
-     }
-
-     public init(text: String, contentType: String, contentId: String, headers: ArrayList<(String, String)>){
+     public init(text: String, contentType: String, contentId!: String = "", headers!: ArrayList<(String, String)> = ArrayList()) {
         this.text = text
         this.contentType = contentType
         this.contentId = contentId
@@ -164,32 +159,34 @@ public class MimeText <: MailContent {
 
 @Default
 public class MimeFile <: MailContent {
-     public var data: Array<Byte>
-     public var contentType: String
-     public var contentId: String
-     public var fileName: String
-     public var headers: ArrayList<(String, String)>
+   public var data: Array<Byte>
+   public var contentType: String
+   public var contentId: String
+   public var fileName: String
+   public var headers: ArrayList<(String, String)>
 
-     public init(data: Array<Byte>, contentType: String, contentId!: String = "", headers!: ArrayList<(String, String)> = ArrayList()) {
-        this.data = data
-        this.contentType = contentType
-     }
+   public init(data: Array<Byte>, contentType: String, contentId!: String = "", headers!: ArrayList<(String, String)> = ArrayList()) {
+      this.data = data
+      this.contentType = contentType
+      this.contentId = contentId
+      this.headers = headers
+   }
 
-     public func toString(): String {
-         let builder = StringBuilder("MimeFile(contentType=${contentType}, data={${data.size}}")
-         if (contentId != "") {
-            builder.append(", contentId=${contentId}")
-         }
-         if (headers.size > 0) {
-            builder.append(", headers=(")
-            for (header in headers) {
-               builder.append("${header[0]}=${header[1]}, ")
-            }
-            builder.append(")")
+   public func toString(): String {
+      let builder = StringBuilder("MimeFile(contentType=${contentType}, data={${data.size}}")
+      if (contentId != "") {
+         builder.append(", contentId=${contentId}")
+      }
+      if (headers.size > 0) {
+         builder.append(", headers=(")
+         for (header in headers) {
+            builder.append("${header[0]}=${header[1]}, ")
          }
          builder.append(")")
-         builder.toString()
-     }
+      }
+      builder.append(")")
+      builder.toString()
+   }
 }
 
 @Default
@@ -359,14 +356,14 @@ public func parseMailContent(
    // parse body
    if (contentTypeMime.toAsciiLower().startsWith("text/")) {
       if (onlyHeaders) {
-         return (from, to, cc, bcc, subject, MimeText("", contentTypeMime, contentId, headers))
+         return (from, to, cc, bcc, subject, MimeText("", contentTypeMime, contentId: contentId, headers: headers))
       }
       var textBody = ""
       while(let Some(line) <- lines.next()) {
             textBody += line + "\r\n"
       }
       textBody = decodeTextBody(textBody, charset, contentTransferEncoding)
-      let text = MimeText(textBody, contentTypeMime, contentId, headers)
+      let text = MimeText(textBody, contentTypeMime, contentId: contentId, headers: headers)
       return (from, to, cc, bcc, subject, textBody)
    } else if (contentTypeMime.startsWith("multipart/")) {
       let mimeMutilParts = MimeMutilParts()

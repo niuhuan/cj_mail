@@ -6,6 +6,7 @@ import std.io.*
 import std.time.*
 import net.tls.*
 import compress.zlib.*
+import cj_mail.exception.*
 
 import cj_lombok.*
 

@@ -3,6 +3,7 @@ package cj_mail.smtp
 
 import cj_lombok.*
 import cj_mail.commons.*
+import cj_mail.exception.*
 
 @Default
 @ToString

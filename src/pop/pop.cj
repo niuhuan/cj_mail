@@ -10,6 +10,7 @@ import std.regex.*
 import log.*
 import cj_mail.commons.*
 import encoding.base64.*
+import cj_mail.exception.*
 
 let popStatePattern = Regex("^\\+OK (\\d+) (\\d+)$")
 

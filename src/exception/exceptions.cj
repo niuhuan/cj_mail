@@ -1,4 +1,4 @@
-package cj_mail.commons
+package cj_mail.exception
 
 import std.collection.*
 
@@ -29,6 +29,14 @@ public abstract class MailException <: Exception {
         super(message)
         lines.append(line1)
         lines.append(line2)
+    }
+
+    public init(
+        message: String,
+        lines: ArrayList<String>
+    ) {
+        super(message)
+        this.lines = lines
     }
 
 }

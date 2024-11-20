@@ -10,6 +10,7 @@ import log.*
 import std.random.*
 import cj_mail.commons.*
 import std.convert.*
+import cj_mail.exception.*
 
 let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
 

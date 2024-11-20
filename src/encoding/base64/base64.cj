@@ -3,6 +3,8 @@ package cj_mail.encoding.base64
 import std.collection.*
 import std.io.*
 
+import cj_mail.exception.*
+
 public var base64DefaultDictionary: Array<Rune> = [
     r'A', r'B', r'C', r'D', r'E', r'F', r'G', r'H', r'I', r'J', r'K', r'L', r'M', r'N', r'O', r'P', r'Q', r'R', r'S', r'T', r'U', r'V', r'W', r'X', r'Y', r'Z',
     r'a', r'b', r'c', r'd', r'e', r'f', r'g', r'h', r'i', r'j', r'k', r'l', r'm', r'n', r'o', r'p', r'q', r'r', r's', r't', r'u', r'v', r'w', r'x', r'y', r'z',
@@ -27,7 +29,7 @@ public class Base64 {
         }
         set (newDict) {
             if (newDict.size != 65) {
-                throw Exception("Invalid dictionary size, must be 65 (64 characters + padding character)")
+                throw MailContentParseException("Invalid dictionary size, must be 65 (64 characters + padding character)")
             }
             var encodeMap = HashMap<Byte, Byte>()
             var decodeMap = HashMap<Byte, Byte>()
@@ -91,7 +93,7 @@ public class Base64Encoder {
 
     public func encode(input: Array<Byte>, finish!: Bool = false) : Array<Byte> {
         if (finished) {
-            throw Exception("Encoder has finished")
+            throw MailContentParseException("Encoder has finished")
         }
         let bas = ByteArrayStream()
         bas.write(input)
@@ -178,7 +180,7 @@ public class Base64Decoder {
 
     public func decode(input: Array<Byte>, finish!: Bool = false) : Array<Byte> {
         if (finished) {
-            throw Exception("decoder has been finished")
+            throw MailContentParseException("decoder has been finished")
         }
         var bas = ByteArrayStream()
         bas.write(input)
@@ -203,7 +205,7 @@ public class Base64Decoder {
             cachedSize += read
             if (dataFinishd && cachedSize > 0) {
                 // only allow blank
-                throw Exception("Invalid base64 data, not allow data after pad")
+                throw MailContentParseException("Invalid base64 data, not allow data after pad")
             }
             if (cachedSize == 4) {
                 var pad: Int64 = 0
@@ -213,7 +215,7 @@ public class Base64Decoder {
                 var i3: Byte = decodeMap.get(cached[3]).getOrThrow()
                 // checkPad
                 if (i0 == 64 || i1 == 64) {
-                    throw Exception("Invalid base64 data")
+                    throw MailContentParseException("Invalid base64 data")
                 }
                 if (i2 == 64) {
                     if (i3 == 64) {
@@ -221,7 +223,7 @@ public class Base64Decoder {
                         i3 = 0
                         pad = 2
                     } else {
-                        throw Exception("Invalid base64 data")
+                        throw MailContentParseException("Invalid base64 data")
                     }
                 } else if (i3 == 64) {
                     i3 = 0
@@ -248,7 +250,7 @@ public class Base64Decoder {
         if (finish) {
             if (cachedSize != 0) {
                 if (cachedSize == 1) {
-                    throw Exception("eof")
+                    throw MailContentParseException("eof")
                 }
                 var pad = 4 - cachedSize
                 var len = 3 - pad

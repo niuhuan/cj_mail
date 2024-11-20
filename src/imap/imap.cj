@@ -8,6 +8,7 @@ import cj_lombok.*
 import std.regex.*
 import std.io.*
 import std.collection.*
+import cj_mail.exception.*
 
 @AllArgsConstructor
 @ToString

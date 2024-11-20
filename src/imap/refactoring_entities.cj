@@ -3,6 +3,7 @@ package cj_mail.imap
 import std.collection.*
 import std.convert.*
 import cj_mail.commons.*
+import cj_mail.exception.*
 
 enum ImapValue {
     | NIL

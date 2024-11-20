@@ -3,6 +3,7 @@ package cj_mail.imap
 import std.regex.*
 import cj_lombok.*
 import std.collection.*
+import cj_mail.exception.*
 
 @Default
 @AllArgsConstructor
