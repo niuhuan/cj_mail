@@ -59,7 +59,7 @@ public class Base64 {
         Base64Decoder(decodeMap, encodeMap)
     }
 
-    public func encodeToSring(inputData: Array<Byte>) : String {
+    public func encodeToString(inputData: Array<Byte>) : String {
         String.fromUtf8(encoder().encode(inputData, finish: true))
     }
 
@@ -258,7 +258,7 @@ public class Base64Decoder {
                 var i0: Byte = decodeMap.get(cached[0]).getOrThrow()
                 var i1: Byte = decodeMap.get(cached[1]).getOrThrow()
                 var i2: Byte = decodeMap.get(cached[2]).getOrThrow()
-                var i3: Byte = decodeMap.get(cached[3]).getOrThrow()
+                // var i3: Byte = decodeMap.get(cached[3]).getOrThrow()
                 var a1 = i0 << 2 | i1>>4
                 var a2 = i1 << 4 | i2>>2
                 list.append(a1)

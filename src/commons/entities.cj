@@ -175,13 +175,6 @@ public class MimeFile <: MailContent {
         this.contentType = contentType
      }
 
-     public init(data: Array<Byte>, contentType: String, contentId: String, headers: ArrayList<(String, String)>) {
-        this.data = data
-        this.contentType = contentType
-        this.contentId = contentId
-        this.headers = headers
-     }
-
      public func toString(): String {
          let builder = StringBuilder("MimeFile(contentType=${contentType}, data={${data.size}}")
          if (contentId != "") {
