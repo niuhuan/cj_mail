@@ -2,9 +2,8 @@ package cj_mail
 
 import cj_lombok.*
 
+public import cj_mail.encoding.base64.*
 public import cj_mail.commons.*
 public import cj_mail.smtp.*
 public import cj_mail.pop.*
 public import cj_mail.imap.*
-
-

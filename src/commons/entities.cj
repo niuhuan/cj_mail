@@ -5,8 +5,8 @@ import std.io.*
 import std.regex.*
 import cj_lombok.*
 import charset4cj.charset.*
-import encoding.base64.*
 import log.*
+import cj_mail.encoding.base64.*
 
 
 let logger = getGlobalLogger(("cj_mail", "Parser"))
@@ -457,7 +457,7 @@ public func parseMailContent(
 }
 
 public func parseBase64MailContent(content: String): Array<Byte> {
-   fromBase64String(content.trimAscii().replace("\r\n", "")).getOrThrow({=>MailContentParseException("Invalid base64 content", content)})
+   StdBase64.decodeFromString(content)
 }
 
 public func parseQuotedPrintableMailContent(content: String): Array<Byte> {

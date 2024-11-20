@@ -1,7 +1,12 @@
 CJ_MAIL 仓颉邮件工具
-=====================
+==================
 
-仓颉编程语言 基础代码生成器。Java mail 的仓颉实现
+仓颉编程语言实现的 邮件、编码 工具包
+
+## 💡 设计
+
+- 做一个可以收发邮件的工具库、可以收发邮件、进行常见的编码格式
+- 保持较少的代码行数、（收取邮件功能使用频率极低）
 
 ## 📦 安装
 
@@ -24,6 +29,7 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 | POP | https://datatracker.ietf.org/doc/html/rfc1939 |
 | IMAP | https://datatracker.ietf.org/doc/html/rfc3501 |
 | SubTypes | https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html |
+| Base64 | https://datatracker.ietf.org/doc/html/rfc2045 |
 
 - [x] SMTP
     - [x] 基础认证
@@ -50,7 +56,9 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
         - [x] `fetchFull` 获取邮件内容并解析 (包含邮件正文、正文：文本、附件)
     - [x] `STORE` 增改标记（例如已读标记、删除标记、旗帜标记）
     - [x] `MOVE` 移动到其他文件夹
-
+- [x] Encoding
+    - [x] base64
+    - [ ] quoted-printable (现仅parse时解码)
 
 ## 🔖 用例
 
@@ -144,6 +152,20 @@ main(): Int64 {
 }
 ```
 
+### Base64
+
+```changjie
+main(): Int64 {
+    // 直接编码或解码
+    let enc = StdBase64.encodeToString(buff)
+    let dec = StdBase64.decodeFromString(content)
+    // 对流编码或解码
+    let encoder = StdBase64.encoder()
+    encoder.encode(buff)
+    encoder.finish()
+}
+```
+
 ### 经过验证的仓颉版本
 
 | 版本 | 分支 | 
@@ -156,6 +178,7 @@ main(): Int64 {
 
 #### 计划中的特性
 
+- [ ] base64 编码输出流、获取有没有finished
 - [ ] 附件输入流的方式读取
 
 ## 📕 协议
