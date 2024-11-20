@@ -170,7 +170,7 @@ public class MimeFile <: MailContent {
      public var fileName: String
      public var headers: ArrayList<(String, String)>
 
-     public init(data: Array<Byte>, contentType: String) {
+     public init(data: Array<Byte>, contentType: String, contentId!: String = "", headers!: ArrayList<(String, String)> = ArrayList()) {
         this.data = data
         this.contentType = contentType
      }
@@ -325,9 +325,9 @@ public func parseMailContent(
          textBody.append("\r\n")
       }
       let mc: MailContent = if ("base64" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseBase64MailContent(textBody.toString()), "application/octet-stream", contentId, headers).toString()
+            MimeFile(parseBase64MailContent(textBody.toString()), "application/octet-stream", contentId: contentId, headers: headers).toString()
       } else if ("quoted-printable" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseQuotedPrintableMailContent(textBody.toString()), "application/octet-stream", contentId, headers).toString()
+            MimeFile(parseQuotedPrintableMailContent(textBody.toString()), "application/octet-stream", contentId: contentId, headers: headers).toString()
       } else {
          textBody.toString()
       }
@@ -430,18 +430,18 @@ public func parseMailContent(
       return (from, to,  cc, bcc, subject, mimeMutilParts)
    } else {
       if (onlyHeaders) {
-         return (from, to, cc, bcc, subject, MimeFile("".toArray(), contentTypeMime, contentId, headers))
+         return (from, to, cc, bcc, subject, MimeFile("".toArray(), contentTypeMime, contentId: contentId, headers: headers))
       }
       var textBody = ""
       while(let Some(line) <- lines.next()) {
             textBody += line + "\r\n"
       }
       let file = if ("base64" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseBase64MailContent(textBody), contentTypeMime, contentId, headers)
+            MimeFile(parseBase64MailContent(textBody), contentTypeMime, contentId: contentId, headers: headers)
       } else if ("quoted-printable" == contentTransferEncoding.toAsciiLower()) {
-            MimeFile(parseQuotedPrintableMailContent(textBody), contentTypeMime, contentId, headers)
+            MimeFile(parseQuotedPrintableMailContent(textBody), contentTypeMime, contentId: contentId, headers: headers)
       } else {
-            MimeFile(textBody.toArray(), contentTypeMime, contentId, headers)
+            MimeFile(textBody.toArray(), contentTypeMime, contentId: contentId, headers: headers)
       }
       file.headers = headers
       file.contentId = contentId
