@@ -29,5 +29,51 @@ public class QuotedPrintableTests {
         let decoded = StdQuotedPrintable.decodeFromString(testEncodedText)
         @Expect(String.fromUtf8(decoded), testText) 
     }
+
+    @TestCase
+    func encodeStream(): Unit {
+        logger.debug("Testing StdQuotedPrintable encodeStream")
+        let encoder = StdQuotedPrintable.encoder()
+        let stream = ByteArrayStream()
+        stream.write(testText.toArray())
+        stream.flush()
+        let out = ByteArrayStream()
+        let buffer = Array<Byte>(10, {_=>0})
+        var read: Int64
+        while (true) {
+            read = stream.read(buffer)
+            if (read == 0) {
+                break
+            }
+            let encoded = encoder.encode(buffer[0..read])
+            out.write(encoded)
+        }
+        out.write(encoder.finish())
+        let encoded = String.fromUtf8(out.readToEnd())
+        @Expect(encoded, testEncodedText) 
+    }
+
+    @TestCase
+    func decodeStream(): Unit {
+        logger.debug("Testing StdQuotedPrintable decodeStream")
+        let decoder = StdQuotedPrintable.decoder()
+        let stream = ByteArrayStream()
+        stream.write(testEncodedText.toArray())
+        stream.flush()
+        let out = ByteArrayStream()
+        let buffer = Array<Byte>(10, {_=>0})
+        var read: Int64
+        while (true) {
+            read = stream.read(buffer)
+            if (read == 0) {
+                break
+            }
+            let decoded = decoder.decode(buffer[0..read])
+            out.write(decoded)
+        }
+        out.write(decoder.finish())
+        let decoded = String.fromUtf8(out.readToEnd())
+        @Expect(decoded, testText) 
+    }
 }
 

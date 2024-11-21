@@ -299,8 +299,12 @@ public class QuotedPrintableInputStream <: InputStream {
                 }
             }
             if (lineArray[0] == equals) {
-                // soft end of line
-                // \n is line end , so this safe
+                if (lineArray.size == 1) {
+                    if (ignoreEof) {
+                        perignoreEof = true
+                        break
+                    }
+                }
                 if (lineArray[1] == translationNewLine) {
                     lineArray = lineArray[2..]
                     continue
