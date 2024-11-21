@@ -82,6 +82,7 @@ public class Base64Encoder {
     private var encodeMap: HashMap<Byte, Byte> // index => rune
     private var cached = Array<Byte>(3, {_=>0})
     private var cachedSize = 0
+    private var encoded = Array<Byte>(4, {_=>0})
     private var finished = false
     private var wrap = false
     private var writeCount = 0
@@ -116,36 +117,28 @@ public class Base64Encoder {
             }
             cachedSize += read
             if (cachedSize==3) {
-                var i0 = (cached[0]>>2)
-                var i1 = ((cached[0]<<4 | cached[1]>>4) & 0b111111)
-                var i2 = ((cached[1]<<2 | cached[2]>>6) & 0b111111)
-                var i3 = (cached[2] & 0b111111)
-                list.append(encodeMap.get(i0).getOrThrow())
-                list.append(encodeMap.get(i1).getOrThrow())
-                list.append(encodeMap.get(i2).getOrThrow())
-                list.append(encodeMap.get(i3).getOrThrow())
-                cachedSize = 0
+                encode()
+                list.appendAll(encoded)
                 processWrap()
             }
         }
         if (finish) {
             match (cachedSize) {
                 case 1 => 
-                    var i0 = (cached[0]>>2)
-                    var i1 = (cached[0]<<4 & 0b111111)
-                    list.append(encodeMap.get(i0).getOrThrow())
-                    list.append(encodeMap.get(i1).getOrThrow())
-                    list.append(encodeMap.get(64).getOrThrow())
-                    list.append(encodeMap.get(64).getOrThrow())
+                    cached[1] = 0
+                    cached[2] = 0
+                    encode()
+                    encoded[2] = encodeMap[64]
+                    encoded[3] = encodeMap[64]
+                    list.appendAll(encoded)
+                    cachedSize = 0
                     processWrap()
                 case 2 =>
-                    var i0 = (cached[0]>>2)
-                    var i1 = ((cached[0]<<4 | cached[1]>>4) & 0b111111)
-                    var i2 = (cached[1]<<2 & 0b111111)
-                    list.append(encodeMap.get(i0).getOrThrow())
-                    list.append(encodeMap.get(i1).getOrThrow())
-                    list.append(encodeMap.get(i2).getOrThrow())
-                    list.append(encodeMap.get(64).getOrThrow())
+                    cached[2] = 0
+                    encode()
+                    encoded[3] = encodeMap[64]
+                    list.appendAll(encoded)
+                    cachedSize = 0
                     processWrap()
                 case _ => ()
             }
@@ -162,6 +155,18 @@ public class Base64Encoder {
         encode(input, finish: true)
     }
 
+    private func encode() {
+        encode(cached, encoded)
+        cachedSize = 0
+    }
+
+    private func encode(i: Array<Byte>, o: Array<Byte>) {
+        o[0] = encodeMap[i[0]>>2]
+        o[1] = encodeMap[(i[0]<<4 | i[1]>>4) & 0b111111]
+        o[2] = encodeMap[(i[1]<<2 | i[2]>>6) & 0b111111]
+        o[3] = encodeMap[i[2] & 0b111111]
+    }
+
 }
 
 public class Base64Decoder {
@@ -170,8 +175,11 @@ public class Base64Decoder {
     private var encodeMap: HashMap<Byte, Byte>
     private var cached = Array<Byte>(4, {_=>0})
     private var cachedSize = 0
+    private var decodedTemp = Array<Byte>(4, {_=>0})
+    private var decoded = Array<Byte>(3, {_=>0})
     private var dataFinishd = false
     private var finished = false
+    private var pad = 0
 
     protected init(decodeMap: HashMap<Byte, Byte>, encodeMap: HashMap<Byte, Byte>) {
         this.decodeMap = decodeMap
@@ -208,42 +216,11 @@ public class Base64Decoder {
                 throw MailContentParseException("Invalid base64 data, not allow data after pad")
             }
             if (cachedSize == 4) {
-                var pad: Int64 = 0
-                var i0: Byte = decodeMap.get(cached[0]).getOrThrow()
-                var i1: Byte = decodeMap.get(cached[1]).getOrThrow()
-                var i2: Byte = decodeMap.get(cached[2]).getOrThrow()
-                var i3: Byte = decodeMap.get(cached[3]).getOrThrow()
-                // checkPad
-                if (i0 == 64 || i1 == 64) {
-                    throw MailContentParseException("Invalid base64 data")
-                }
-                if (i2 == 64) {
-                    if (i3 == 64) {
-                        i2 = 0
-                        i3 = 0
-                        pad = 2
-                    } else {
-                        throw MailContentParseException("Invalid base64 data")
-                    }
-                } else if (i3 == 64) {
-                    i3 = 0
-                    pad = 1
-                }
-                // insert data
-                var a1 = i0 << 2 | i1>>4
-                var a2 = i1 << 4 | i2>>2
-                var a3 = i2 << 6 | i3
-                list.append(a1)
-                list.append(a2)
-                list.append(a3)
+                decode()
+                list.appendAll(decoded[..3-pad])
                 cachedSize = 0
-                // remove padding
                 if (pad > 0) {
                     dataFinishd = true
-                }
-                while (pad > 0) {
-                    pad--
-                    list.remove(list.size - 1)
                 }
             }
         }
@@ -252,30 +229,53 @@ public class Base64Decoder {
                 if (cachedSize == 1) {
                     throw MailContentParseException("eof")
                 }
-                var pad = 4 - cachedSize
-                var len = 3 - pad
+                var shortageBytes = 4 - cachedSize
+                var outLen = 3 - shortageBytes
                 for (idx in cachedSize..4) {
                     cached[idx] = 0
                 }
-                var i0: Byte = decodeMap.get(cached[0]).getOrThrow()
-                var i1: Byte = decodeMap.get(cached[1]).getOrThrow()
-                var i2: Byte = decodeMap.get(cached[2]).getOrThrow()
-                // var i3: Byte = decodeMap.get(cached[3]).getOrThrow()
-                var a1 = i0 << 2 | i1>>4
-                var a2 = i1 << 4 | i2>>2
-                list.append(a1)
-                if (len >= 2) {
-                    list.append(a2)
-                }
+                decode()
+                list.appendAll(decoded[..outLen])
             }
             finished = true
         }
         (list.toArray())
     }
 
-
     public func finish(): Array<Byte> {
         decode([], finish: true)
+    }
+
+    private func decode() {
+        pad = decode(cached, decodedTemp, decoded)
+        cachedSize = 0
+    }
+
+    private func decode(i: Array<Byte>, t: Array<Byte>, o: Array<Byte>) : Int64 {
+        var pad = 0
+        t[0] = decodeMap[i[0]]
+        t[1] = decodeMap[i[1]]
+        t[2] = decodeMap[i[2]]
+        t[3] = decodeMap[i[3]]
+        if (t[0] == 64 || t[1] == 64) {
+            throw MailContentParseException("Invalid base64 data")
+        }
+        if (t[2] == 64) {
+            if (t[3] == 64) {
+                t[2] = 0
+                t[3] = 0
+                pad = 2
+            } else {
+                throw MailContentParseException("Invalid base64 data")
+            }
+        } else if (t[3] == 64) {
+            t[3] = 0
+            pad = 1
+        }
+        o[0] = decodedTemp[0] << 2 | decodedTemp[1]>>4
+        o[1] = decodedTemp[1] << 4 | decodedTemp[2]>>2
+        o[2] = decodedTemp[2] << 6 | decodedTemp[3]
+        pad
     }
 
 }
