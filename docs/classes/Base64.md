@@ -19,6 +19,9 @@ class Base64Encoder
 | encode | 编码
 | finish | 编码结束并返回缓存中的数据
 
+| 属性 | 说明 |
+| -- | :-- |
+| finished | 是否已经结束
 
 class Base64Decoder
 ====================
@@ -27,3 +30,7 @@ class Base64Decoder
 | -- | :-- |
 | decode | 解码码
 | finish | 解码结束并返回缓存中的数据
+
+| 属性 | 说明 |
+| -- | :-- |
+| finished | 是否已经结束
