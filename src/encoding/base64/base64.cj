@@ -5,11 +5,7 @@ import std.io.*
 
 import cj_mail.exception.*
 
-public var base64DefaultDictionary: Array<Rune> = [
-    r'A', r'B', r'C', r'D', r'E', r'F', r'G', r'H', r'I', r'J', r'K', r'L', r'M', r'N', r'O', r'P', r'Q', r'R', r'S', r'T', r'U', r'V', r'W', r'X', r'Y', r'Z',
-    r'a', r'b', r'c', r'd', r'e', r'f', r'g', r'h', r'i', r'j', r'k', r'l', r'm', r'n', r'o', r'p', r'q', r'r', r's', r't', r'u', r'v', r'w', r'x', r'y', r'z',
-    r'0', r'1', r'2', r'3', r'4', r'5', r'6', r'7', r'8', r'9', r'+', r'/', r'='
-]
+let base64DefaultDictionary = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 
 public let StdBase64 = Base64()
 
@@ -19,22 +15,23 @@ public class Base64 {
     private var decodeMap: HashMap<Byte, Byte> = HashMap<Byte, Byte>() // rune => index
     private var wrap = false
     
-    public mut prop dictionary : Array<Rune> {
+    public mut prop dictionary : String {
         get () { 
-            Array<Rune>(
+            String.fromUtf8(Array<UInt8>(
                 encodeMap.size
             ) {
-                i => Rune(encodeMap[UInt8(i)])
-            }
+                i => encodeMap[UInt8(i)]
+            })
         }
-        set (newDict) {
-            if (newDict.size != 65) {
+        set (newDictString) {
+            let buff = newDictString.toArray()
+            if (buff.size != 65) {
                 throw MailContentParseException("Invalid dictionary size, must be 65 (64 characters + padding character)")
             }
             var encodeMap = HashMap<Byte, Byte>()
             var decodeMap = HashMap<Byte, Byte>()
             for (i in 0..=64) {
-                var bt = String(newDict[i])[0]
+                var bt = buff[i]
                 encodeMap[UInt8(i)] = bt
                 decodeMap[bt] = UInt8(i)
             }
@@ -48,7 +45,7 @@ public class Base64 {
         this.wrap = wrap
     }
 
-    public init(dictionary: Array<Rune>, wrap!: Bool = false) {
+    public init(dictionary: String, wrap!: Bool = false) {
         this.dictionary = dictionary
         this.wrap = wrap
     }
