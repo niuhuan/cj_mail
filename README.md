@@ -20,7 +20,9 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 
 2.&nbsp;执行 `cjpm update` 命令进行依赖更新 
 
-3.&nbsp;后续更新需要再次执行`cjpm update`进行代码拉取。当仓颉包管理器完善时，本项目将尽快会推送到仓库, 使用版本依赖使用
+3.&nbsp;在需要使用的仓颉代码中进行引入`import cj_mail.*`
+
+4.&nbsp;后续更新需要再次执行`cjpm update`进行代码拉取。当仓颉包管理器完善时，本项目将尽快会推送到仓库, 使用版本依赖使用
 
 ## 🔖 用例
 
@@ -166,12 +168,9 @@ main(): Int64 {
 
 ## 🏆 贡献
 
-欢迎您的issue和pull request, fork时请保留源仓库地址
+欢迎您的issue或pull request到仓颉TCP或上游仓库地址
 
-#### 计划中的特性
-
-- [ ] base64 编码输出流、获取有没有finished
-- [ ] 附件输入流的方式读取
+fork时请保留上游仓库地址 [https://gitcode.com/niuhuan_cn/cj_mail](https://gitcode.com/niuhuan_cn/cj_mail)
 
 ## 📕 协议
 
