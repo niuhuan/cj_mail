@@ -83,9 +83,12 @@ public class Base64Encoder {
     private var cached = Array<Byte>(3, {_=>0})
     private var cachedSize = 0
     private var encoded = Array<Byte>(4, {_=>0})
-    private var finished = false
+    private var isFinished = false
     private var wrap = false
     private var writeCount = 0
+    public prop finished: Bool { 
+        get () { isFinished }
+     }
     
     protected init(encodeMap: HashMap<Byte, Byte>, wrap!: Bool = false) {
         this.encodeMap = encodeMap
@@ -93,8 +96,8 @@ public class Base64Encoder {
     }
 
     public func encode(input: Array<Byte>, finish!: Bool = false) : Array<Byte> {
-        if (finished) {
-            throw MailContentParseException("Encoder has finished")
+        if (isFinished) {
+            throw MailContentParseException("Encoder has isFinished")
         }
         let bas = ByteArrayStream()
         bas.write(input)
@@ -142,7 +145,7 @@ public class Base64Encoder {
                     processWrap()
                 case _ => ()
             }
-            finished = true
+            isFinished = true
         }
         (list.toArray())
     }
@@ -178,7 +181,7 @@ public class Base64Decoder {
     private var decodedTemp = Array<Byte>(4, {_=>0})
     private var decoded = Array<Byte>(3, {_=>0})
     private var dataFinishd = false
-    private var finished = false
+    private var isFinished = false
     private var pad = 0
 
     protected init(decodeMap: HashMap<Byte, Byte>, encodeMap: HashMap<Byte, Byte>) {
@@ -187,8 +190,8 @@ public class Base64Decoder {
     }
 
     public func decode(input: Array<Byte>, finish!: Bool = false) : Array<Byte> {
-        if (finished) {
-            throw MailContentParseException("decoder has been finished")
+        if (isFinished) {
+            throw MailContentParseException("decoder has been isFinished")
         }
         var bas = ByteArrayStream()
         bas.write(input)
@@ -237,7 +240,7 @@ public class Base64Decoder {
                 decode()
                 list.appendAll(decoded[..outLen])
             }
-            finished = true
+            isFinished = true
         }
         (list.toArray())
     }
