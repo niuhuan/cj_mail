@@ -21,7 +21,7 @@ public class PopException <: Exception {
 
 public class Pop {
 
-    let logger = getGlobalLogger(("cj_mail", "Pop"))
+    let logger = getGlobalLogger(("name", "cj_mail.pop"))
 
     public var host: String =  ""
     public var tlsPort: UInt16 = 995

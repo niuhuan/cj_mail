@@ -14,7 +14,7 @@ const testBase64 = "5L2g5aW977yM5LiW55WM77yB"
 @When[test]
 @Test
 public class Base64Tests {
-    let logger = getGlobalLogger(("name", "Base64Tests"))
+    let logger = getGlobalLogger(("name", "cj_mail.tests.Base64Tests"))
 
     @TestCase
     func encodeToString(): Unit {

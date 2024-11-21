@@ -9,7 +9,7 @@ import log.*
 import cj_mail.encoding.base64.*
 import cj_mail.exception.*
 
-let logger = getGlobalLogger(("cj_mail", "Parser"))
+let logger = getGlobalLogger(("name", "cj_mail.commons"))
 let mailAddressPattern = Regex("^(.*)?<(.*)>$")
 
 

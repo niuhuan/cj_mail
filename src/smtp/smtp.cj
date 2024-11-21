@@ -16,7 +16,7 @@ let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
 
 public class Smtp {
 
-   let logger = getGlobalLogger(("cj_mail", "Smtp"))
+   let logger = getGlobalLogger(("name", "cj_mail.smtp"))
 
    public var host: String = ""
    public var tlsPort: UInt16 = 587

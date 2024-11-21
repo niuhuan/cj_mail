@@ -21,7 +21,7 @@ let fetchRegex = Regex("^\\* \\d+ FETCH [\\S\\s]+ \\{(\\d+)\\}$")
 
 public class Imap {
 
-    let logger = getGlobalLogger(("cj_mail", "Imap"))
+    let logger = getGlobalLogger(("name", "cj_mail.imap"))
 
     public var host: String =  ""
     public var tlsPort: UInt16 = 993
