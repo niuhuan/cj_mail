@@ -9,14 +9,14 @@ import std.unittest.testmacro.*
 import cj_mail.*
 
 @When[test]
-const testText = "你好，世界！我是一名仓颉工程师！在编写BASE64工具包。AESTE6N;Z5^Y5`5Y2D^D"
-@When[test]
-const testBase64 = "5L2g5aW977yM5LiW55WM77yB5oiR5piv5LiA5ZCN5LuT6aKJ5bel56iL5biI77yB5Zyo57yW5YaZQkFTRTY05bel5YW35YyF44CCQUVTVEU2TjtaNV5ZNWA1WTJEXkQ="
-
-@When[test]
 @Test
 public class Base64Tests {
+
     let logger = getGlobalLogger(("name", "cj_mail.tests.Base64Tests"))
+
+    let testText = "你好，世界！我是一名仓颉工程师！在编写BASE64工具包。AESTE6N;Z5^Y5`5Y2D^D"
+    let testBase64 = "5L2g5aW977yM5LiW55WM77yB5oiR5piv5LiA5ZCN5LuT6aKJ5bel56iL5biI77yB5Zyo57yW5YaZQkFTRTY05bel5YW35YyF44CCQUVTVEU2TjtaNV5ZNWA1WTJEXkQ="
+
 
     @TestCase
     func encodeToString(): Unit {
