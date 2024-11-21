@@ -102,7 +102,7 @@ main(): Int64 {
 
 ### Base64
 
-[文档](docs/classes/Base64.md)
+[更多用例](src/tests/base64_tests.cj) [文档](docs/classes/Base64.md)
 
 ```cangjie
 main(): Int64 {
