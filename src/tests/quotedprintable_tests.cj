@@ -22,5 +22,12 @@ public class QuotedPrintableTests {
         let encoded = StdQuotedPrintable.encodeToString(testText.toArray())
         @Expect(encoded, testEncodedText) 
     }
+
+    @TestCase
+    func decodeFromString(): Unit {
+        logger.debug("Testing StdQuotedPrintable decodeFromString")
+        let decoded = StdQuotedPrintable.decodeFromString(testEncodedText)
+        @Expect(String.fromUtf8(decoded), testText) 
+    }
 }
 
