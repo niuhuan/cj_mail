@@ -58,6 +58,10 @@ public class Base64 {
         Base64Decoder(decodeMap, encodeMap)
     }
 
+    public func encodeSream(output: OutputStream) : Base64OutputStream {
+        Base64OutputStream(output, encodeMap, wrap: wrap)
+    }
+
     public func encodeToString(inputData: Array<Byte>) : String {
         String.fromUtf8(encoder().encode(inputData, finish: true))
     }
