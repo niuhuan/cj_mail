@@ -76,75 +76,19 @@ private let blankRunes = [translationNewLine, translationRreturn, translationSpa
 
 public class Base64Encoder {
 
-    private var encodeMap: HashMap<Byte, Byte> // index => rune
-    private var cached = Array<Byte>(3, {_=>0})
-    private var cachedSize = 0
-    private var encoded = Array<Byte>(4, {_=>0})
-    private var isFinished = false
-    private var wrap = false
-    private var writeCount = 0
-    public prop finished: Bool { 
-        get () { isFinished }
-     }
-    
+    private let bufferStream: ByteArrayStream
+    private let encodeSream: Base64OutputStream
+
     protected init(encodeMap: HashMap<Byte, Byte>, wrap!: Bool = false) {
-        this.encodeMap = encodeMap
-        this.wrap = wrap
+        bufferStream = ByteArrayStream()
+        encodeSream = Base64OutputStream(bufferStream, encodeMap, wrap: wrap)
     }
 
     public func encode(input: Array<Byte>, finish!: Bool = false) : Array<Byte> {
-        if (isFinished) {
-            throw MailContentParseException("Encoder has isFinished")
-        }
-        let bas = ByteArrayStream()
-        bas.write(input)
-        bas.flush()
-        var list = ArrayList<Byte>()
-        func processWrap() {
-            if (wrap) {
-                writeCount += 4
-                if (writeCount >= 76) {
-                    list.append(translationRreturn)
-                    list.append(translationNewLine)
-                    writeCount = 0
-                }
-            }
-        }
-        while (true) {
-            var read = bas.read(cached[cachedSize..])
-            if (read == 0) {
-                break
-            }
-            cachedSize += read
-            if (cachedSize==3) {
-                encode()
-                list.appendAll(encoded)
-                processWrap()
-            }
-        }
-        if (finish) {
-            match (cachedSize) {
-                case 1 => 
-                    cached[1] = 0
-                    cached[2] = 0
-                    encode()
-                    encoded[2] = encodeMap[64]
-                    encoded[3] = encodeMap[64]
-                    list.appendAll(encoded)
-                    cachedSize = 0
-                    processWrap()
-                case 2 =>
-                    cached[2] = 0
-                    encode()
-                    encoded[3] = encodeMap[64]
-                    list.appendAll(encoded)
-                    cachedSize = 0
-                    processWrap()
-                case _ => ()
-            }
-            isFinished = true
-        }
-        (list.toArray())
+        encodeSream.writeData(input, finish: finish)
+        let result = bufferStream.readToEnd()
+        bufferStream.clear()
+        result
     }
 
     public func finish() : Array<Byte> {
@@ -153,18 +97,6 @@ public class Base64Encoder {
 
     public func finish(input: Array<Byte>) : Array<Byte> {
         encode(input, finish: true)
-    }
-
-    private func encode() {
-        encode(cached, encoded)
-        cachedSize = 0
-    }
-
-    private func encode(i: Array<Byte>, o: Array<Byte>) {
-        o[0] = encodeMap[i[0]>>2]
-        o[1] = encodeMap[(i[0]<<4 | i[1]>>4) & 0b111111]
-        o[2] = encodeMap[(i[1]<<2 | i[2]>>6) & 0b111111]
-        o[3] = encodeMap[i[2] & 0b111111]
     }
 
 }
@@ -276,6 +208,100 @@ public class Base64Decoder {
         o[1] = decodedTemp[1] << 4 | decodedTemp[2]>>2
         o[2] = decodedTemp[2] << 6 | decodedTemp[3]
         pad
+    }
+
+}
+
+public class Base64OutputStream <: OutputStream {
+
+    private let output: OutputStream
+    private let encodeMap: HashMap<Byte, Byte>
+    private let wrap: Bool
+    private var writeCount = 0
+
+    private var writing = Array<Byte>()
+    private var encoded = Array<Byte>(4, {_=>0})
+
+    private var isFinished = false
+    public prop finished: Bool { 
+        get () { isFinished }
+    }
+
+    public init(output: OutputStream, encodeMap: HashMap<Byte, Byte>, wrap!: Bool = false) {
+        this.output = output
+        this.encodeMap = encodeMap
+        this.wrap = wrap
+    }
+
+    public func flush() {
+        output.flush()
+    }
+
+    public func write(data: Array<Byte>) {
+        writeData(data)
+    }
+
+    public func finish() {
+        writeData([], finish: true)
+    }
+
+    public func writeData(data: Array<Byte>, finish!: Bool = false) {
+        if (isFinished) {
+            throw MailContentParseException("Encoder has isFinished")
+        }
+        func processWrap() {
+            if (wrap) {
+                writeCount += 4
+                if (writeCount >= 76) {
+                    output.write([translationRreturn, translationNewLine])
+                    writeCount = 0
+                }
+            }
+        }
+        writing = if (writing.size == 0) {
+            data
+        } else {
+            let bos = ByteArrayStream()
+            bos.write(writing)
+            bos.write(data)
+            bos.readToEnd()
+        }
+        while (writing.size >= 3) {
+            encode()
+            output.write(encoded)
+            processWrap()
+        }
+        if (finish) {
+            if (writing.size > 0) {
+                if (writing.size == 1) {
+                    writing = [writing[0], 0, 0]
+                    encode()
+                    output.write([encoded[0], encoded[1], encodeMap[64], encodeMap[64]])
+                } else if (writing.size == 2) {
+                    writing = [writing[0], writing[1], 0]
+                    encode()
+                    output.write([encoded[0], encoded[1], encoded[2], encodeMap[64]])
+                }
+            }
+            isFinished = true
+        } else if (writing.size > 0) {
+            // !!! IMPORTANT !!! DO NOT DELETE THIS BLOCK !!! 
+            // if not copy, the writing's will be changed
+            // (because the writing is a reference by byteArrayStream)
+            writing = writing.clone()
+        }
+    }
+
+    private func encode() {
+        encode(writing, encoded)
+        writing = writing[3..]
+    }
+
+    private func encode(i: Array<Byte>, o: Array<Byte>) {
+        o[0] = encodeMap[i[0]>>2]
+        o[1] = encodeMap[(i[0]<<4 | i[1]>>4) & 0b111111]
+        o[2] = encodeMap[(i[1]<<2 | i[2]>>6) & 0b111111]
+        o[3] = encodeMap[i[2] & 0b111111]
     }
 
 }

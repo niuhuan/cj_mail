@@ -111,7 +111,7 @@ public class QuotedPrintableDecoder {
         }
         buffStream.write(data)
         while(true) {
-            let n = qpiStream.readInput(buffer, ignoreEof: !finish)
+            let n = qpiStream.readData(buffer, ignoreEof: !finish)
             if (n == 0) {
                 break
             }
@@ -263,10 +263,10 @@ public class QuotedPrintableInputStream <: InputStream {
     }
 
     public func read(buffer: Array<Byte>): Int {
-        readInput(buffer)
+        readData(buffer)
     }
 
-    public func readInput(buffer: Array<Byte>, ignoreEof!:Bool = false): Int {
+    public func readData(buffer: Array<Byte>, ignoreEof!:Bool = false): Int {
         // Deviations from RFC 2045:
         // 1. in addition to "=\r\n", "=\n" is also treated as soft line break.
         // 2. it will pass through a '\r' or '\n' not preceded by '=', consistent
