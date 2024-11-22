@@ -4,18 +4,11 @@ import cj_mail.commons.*
 import cj_mail.log.*
 import net.tls.*
 import std.socket.*
-import cj_lombok.*
 import std.regex.*
 import std.io.*
 import std.collection.*
 import cj_mail.exception.*
-
-@AllArgsConstructor
-@ToString
-@Default
-public class ImapException <: MailException {
-   public var response: String
-}
+import std.convert.*
 
 private let fetchRegex = Regex("^\\* \\d+ FETCH [\\S\\s]+ \\{(\\d+)\\}$")
 private let defaultTlsPort: UInt16 = 993

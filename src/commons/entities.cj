@@ -3,21 +3,28 @@ package cj_mail.commons
 import std.collection.*
 import std.io.*
 import std.regex.*
-import cj_lombok.*
 import charset4cj.charset.*
 import cj_mail.log.*
 import cj_mail.encoding.base64.*
 import cj_mail.exception.*
+import std.convert.*
 
 let mailAddressPattern = Regex("^(.*)?<(.*)>$")
 
 /// MailAdress
 
-@Default
-@AllArgsConstructor
 public class MailAddress <: ToString {
    public var name: String
    public var address: String
+
+   public init(name: String, address: String) {
+      this.name = name
+      this.address = address
+   }
+
+   public init() {
+      this("", "")
+   }
 
    public func toString() {
       "${name}<${address}>"
@@ -50,8 +57,6 @@ public func parseMailAddresses(addresses: String): ArrayList<MailAddress> {
 
 /// Mail
 
-@Default
-@AllArgsConstructor
 public open class Mail {
    public var from: MailAddress
    public var to: ArrayList<MailAddress>
@@ -59,6 +64,14 @@ public open class Mail {
    public var bcc: ArrayList<MailAddress>
    public var subject: String
    public var data: MailContent = ""
+
+   public init() {
+      from = MailAddress()
+      to = ArrayList()
+      cc = ArrayList()
+      bcc = ArrayList()
+      subject = ""
+   }
 }
 
 extend Mail <: ToString {
@@ -124,12 +137,14 @@ public interface MailContent <: ToString {
 extend String <: MailContent{
 }
 
-@Default
 public class MimeText <: MailContent {
      public var text: String = ""
      public var contentType: String = ""
      public var contentId: String = ""
      public var headers: ArrayList<(String, String)> = ArrayList()
+
+     public init() {
+     }
 
      public init(text: String, contentType: String, contentId!: String = "", headers!: ArrayList<(String, String)> = ArrayList()) {
         this.text = text
@@ -155,7 +170,6 @@ public class MimeText <: MailContent {
      }
 }
 
-@Default
 public class MimeFile <: MailContent {
    public var data: Array<Byte>
    public var contentType: String
@@ -163,11 +177,20 @@ public class MimeFile <: MailContent {
    public var fileName: String
    public var headers: ArrayList<(String, String)>
 
+   public init() {
+      this.data = "".toArray()
+      this.contentType = ""
+      this.contentId = ""
+      this.fileName = ""
+      this.headers = ArrayList()
+   }
+
    public init(data: Array<Byte>, contentType: String, contentId!: String = "", headers!: ArrayList<(String, String)> = ArrayList()) {
       this.data = data
       this.contentType = contentType
       this.contentId = contentId
       this.headers = headers
+      this.fileName = ""
    }
 
    public func toString(): String {
@@ -187,12 +210,14 @@ public class MimeFile <: MailContent {
    }
 }
 
-@Default
 public class MimeMutilParts <: Collection<MailContent> & MailContent {
    public var contentType: String = ""
    public var contentId: String = ""
    public var headers: ArrayList<(String, String)> = ArrayList()
    public var parts: ArrayList<MailContent> = ArrayList()
+
+   public init() {
+   }
 
    public func iterator() : Iterator<MailContent> {
       parts.iterator()

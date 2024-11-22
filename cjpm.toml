@@ -1,11 +1,10 @@
 [dependencies]
-cj_lombok = { git = "https://gitcode.com/niuhuan_cn/cj_lombok" }
 charset4cj = { git = "https://gitcode.com/Cangjie-TPC/charset4cj.git", branch = "cjc_0.53.13" }
 
 [package]
   cjc-version = "0.53.13"
   compile-option = ""
-  description = "nothing here"
+  description = "a mail utils for cangjie, smtp, pop, imap, base64 has been implemented"
   link-option = ""
   name = "cj_mail"
   output-type = "static"

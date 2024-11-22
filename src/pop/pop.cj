@@ -5,19 +5,22 @@ import net.tls.*
 import std.socket.*
 import std.collection.*
 import std.io.*
-import cj_lombok.*
 import std.regex.*
 import cj_mail.log.*
 import cj_mail.commons.*
 import encoding.base64.*
 import cj_mail.exception.*
+import std.convert.*
 
 private let popStatePattern = Regex("^\\+OK (\\d+) (\\d+)$")
 private let defaultTlsPort: UInt16 = 995
 
-@AllArgsConstructor
 public class PopException <: Exception {
     public var serverResponse: String
+
+    public init(serverResponse: String) {
+        this.serverResponse = serverResponse
+    }
 }
 
 public class Pop <: Resource {

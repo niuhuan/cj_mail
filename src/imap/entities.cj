@@ -1,17 +1,28 @@
 package cj_mail.imap
 
 import std.regex.*
-import cj_lombok.*
 import std.collection.*
 import cj_mail.exception.*
+import std.convert.*
 
-@Default
-@AllArgsConstructor
-@ToString
-public struct MailboxState {
+public struct MailboxState <: ToString{
     public var exists: Int64
     public var recent: Int64
     public var flags: ArrayList<String>
+
+    public init(exists: Int64, recent: Int64, flags: ArrayList<String>) {
+        this.exists = exists
+        this.recent = recent
+        this.flags = flags
+    }
+
+    public init() {
+        this(0, 0, ArrayList<String>())
+    }
+
+    public func toString(): String {
+        "MailboxState(exists=${exists}, recent=${recent}, flags=${flags})"
+    }
 }
 
 public func parseMailBoxState(content: String): MailboxState {

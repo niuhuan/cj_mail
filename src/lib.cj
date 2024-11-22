@@ -1,7 +1,5 @@
 package cj_mail
 
-import cj_lombok.*
-
 public import cj_mail.log.*
 public import cj_mail.exception.*
 public import cj_mail.encoding.base64.*
