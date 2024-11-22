@@ -124,7 +124,7 @@ main(): Int64 {
 | POP | https://datatracker.ietf.org/doc/html/rfc1939 |
 | IMAP | https://datatracker.ietf.org/doc/html/rfc3501 |
 | SubTypes | https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html |
-| Base64 | https://datatracker.ietf.org/doc/html/rfc2045 |
+| Base64 / QuotedPrintable | https://datatracker.ietf.org/doc/html/rfc2045 |
 
 - [x] SMTP
     - [x] 基础认证
@@ -153,7 +153,7 @@ main(): Int64 {
     - [x] `MOVE` 移动到其他文件夹
 - [x] Encoding
     - [x] base64
-    - [ ] quoted-printable (现仅parse时解码)
+    - [x] quoted-printable
 
 ## 🏗️ 构建
 

@@ -50,7 +50,6 @@ public class QuotedPrintable {
         let qpoStream = QuotedPrintableOutputStream(buffStream)
         qpoStream.write(data)
         qpoStream.flushLine()
-        qpoStream.flush()
         String.fromUtf8(buffStream.readToEnd())
     }
 
@@ -246,6 +245,7 @@ public class QuotedPrintableOutputStream <: OutputStream {
     public func flushLine() {
         output.write(line[0..i])
         i = 0
+        output.flush()
     }
 
 }
@@ -263,7 +263,7 @@ public class QuotedPrintableInputStream <: InputStream {
     }
 
     public func read(buffer: Array<Byte>): Int {
-        readData(buffer)
+        readData(buffer, ignoreEof: true)
     }
 
     public func readData(buffer: Array<Byte>, ignoreEof!:Bool = false): Int {

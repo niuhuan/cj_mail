@@ -15,6 +15,7 @@ private let blankRunes = [translationNewLine, translationRreturn, translationSpa
 public let Base64DefaultDictionary = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
 
 public let StdBase64 = Base64()
+public let WrappedBase64 = Base64(wrap: true)
 
 public class Base64 {
 

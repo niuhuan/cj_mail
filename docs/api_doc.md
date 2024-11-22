@@ -10,9 +10,10 @@ CJ_MAIL API文档
 #### - [Base64](classes/Base64.md) ：Base64编码解码工具
 
 ## 函数
-无
+#### - setCjMailLogger() : 设置logger
 
 ## 对象
 
-#### - StdBase64 ： [Base64](classes/Base64.md)类使用无参构造器构造的对象，方便直接使用
-
+#### - StdBase64 : [Base64](classes/Base64.md)类使用无参构造器构造的对象，方便直接使用
+#### - WrappedBase64 : [Base64](classes/Base64.md)构造对象，输出base64编码时会自动追加`\r\n`方便直接使用
+#### - StdQuotedPrintable : [QuotedPrintable](classes/QuotedPrintable)构造对象，方便直接使用
