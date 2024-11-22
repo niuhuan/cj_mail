@@ -238,7 +238,7 @@ public func parseMailContent(
    var contentTransferEncoding =""
    var headers = ArrayList<(String, String)>()
    // read header
-   var lines = content.trimAscii().lazySplit("\r\n")
+   var lines = StringReader(ByteArrayStream.fromString(content))
    // foreach Header
    var headerLine = ""
    func parseHeader() {
@@ -267,7 +267,7 @@ public func parseMailContent(
    }
    var first = true;
    while(!skipHeaders && true){
-      let lineOption = lines.next()
+      let lineOption = lines.readln()
       let line = match (lineOption) {
             case Some(l) => l
             case None => 
@@ -315,7 +315,7 @@ public func parseMailContent(
    // parse mime
    if (contentType == ""){
       var textBody = StringBuilder()
-      while(let Some(line) <- lines.next()) {
+      while(let Some(line) <- lines.readln()) {
          textBody.append(line)
          textBody.append("\r\n")
       }
@@ -351,13 +351,14 @@ public func parseMailContent(
                continue
       }
    }
+
    // parse body
    if (contentTypeMime.toAsciiLower().startsWith("text/")) {
       if (onlyHeaders) {
          return (from, to, cc, bcc, subject, MimeText("", contentTypeMime, contentId: contentId, headers: headers))
       }
       var textBody = ""
-      while(let Some(line) <- lines.next()) {
+      while(let Some(line) <- lines.readln()) {
             textBody += line + "\r\n"
       }
       textBody = decodeTextBody(textBody, charset, contentTransferEncoding)
@@ -375,22 +376,24 @@ public func parseMailContent(
             if (skipHeaders) {
                var builder = StringBuilder()
                while (true) {
-                  let line = lines.next()
+                  let line = lines.readln()
                   match(line) {
                      case Some(line) =>
                         if (line.startsWith("--")) {
                            mimeMutilParts.append(builder.toString())
                            builder = StringBuilder()
                            builder.append(line)
-                           while (let Some(lineOff) <- lines.next()) {
+                           builder.append("\r\n")
+                           while (let Some(lineOff) <- lines.readln()) {
                                  builder.append(lineOff)
                                  builder.append("\r\n")
                            }
-                           lines = builder.toString().trimAscii().lazySplit("\r\n")
+                           lines = StringReader(ByteArrayStream.fromString(builder.toString()))
                            boundary = line.trimLeft("--").trimRight("--")
                            break
                         } else {
                            builder.append(line)
+                           builder.append("\r\n")
                         }
                      case None =>
                         mimeMutilParts.append(builder.toString())
@@ -401,7 +404,7 @@ public func parseMailContent(
                throw MailContentParseException("multipart missing boundary", contentType)
             }
       }
-      var line = lines.next().getOrThrow({=>MailContentParseException("The email content ended prematurely 1")})
+      var line = lines.readln().getOrThrow({=>MailContentParseException("The email content ended prematurely 1")})
       // blank content
       if (line == "--${boundary}--") {
             return (from, to,  cc, bcc, subject, mimeMutilParts)
@@ -409,18 +412,18 @@ public func parseMailContent(
       // children
       var builder = StringBuilder()
       while(true) {
-            line = lines.next().getOrThrow({=> MailContentParseException("The email content ended prematurely 2")})
-            if (line.startsWith("--${boundary}")) {
-               let (_, _, _, _, _, data) = parseMailContent(builder.toString(), isPartEntry: true)
-               mimeMutilParts.append(data)
-               if (line == "--${boundary}--") {
-                  break
-               }
-               builder = StringBuilder()
-               continue
+         line = lines.readln().getOrThrow({=> MailContentParseException("The email content ended prematurely 2")})
+         if (line.startsWith("--${boundary}")) {
+            let (_, _, _, _, _, data) = parseMailContent(builder.toString(), isPartEntry: true)
+            mimeMutilParts.append(data)
+            if (line == "--${boundary}--") {
+               break
             }
-            builder.append(line)
-            builder.append("\r\n")
+            builder = StringBuilder()
+            continue
+         }
+         builder.append(line)
+         builder.append("\r\n")
       }
       return (from, to,  cc, bcc, subject, mimeMutilParts)
    } else {
@@ -428,7 +431,7 @@ public func parseMailContent(
          return (from, to, cc, bcc, subject, MimeFile("".toArray(), contentTypeMime, contentId: contentId, headers: headers))
       }
       var textBody = ""
-      while(let Some(line) <- lines.next()) {
+      while(let Some(line) <- lines.readln()) {
             textBody += line + "\r\n"
       }
       let file = if ("base64" == contentTransferEncoding.toAsciiLower()) {
@@ -472,7 +475,7 @@ public func parseQuotedPrintableMailContent(content: String): Array<Byte> {
 
 let subjectEncodeRegexp = Regex("=\\?([a-zA-Z0-9\\-]+)\\?([bqBQ])\\?([^\\?]+)\\?=")
 
-func decodeSubject(subjectInput: String): String {
+protected func decodeSubject(subjectInput: String): String {
    var subject = subjectInput
    if (subject == "") {
       ""

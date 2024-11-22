@@ -341,7 +341,7 @@ private func parseImapMail(line: String, reader: StreamReader, skipHeaders!: Boo
             }
             subject = match (enevelope[1]) {
                 case ImapValue.STRING(str) =>
-                    str
+                    decodeSubject(str)
                 case _ =>
                     "" // NIL
             }

@@ -143,7 +143,7 @@ func parseImapAddress(list: ArrayList<ImapValue>): MailAddress {
     var name = getImapValueString(list[0])
     var mailId = getImapValueString(list[2])
     var mailDomain = getImapValueString(list[3])
-    MailAddress(name, "${mailId}@${mailDomain}")
+    MailAddress(decodeSubject(name), "${mailId}@${mailDomain}")
 }
 
 func getImapValueString(value: ImapValue): String {

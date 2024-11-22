@@ -258,6 +258,9 @@ public class Base64InputStream <: InputStream {
     private var decodedOff = 0
     private var pad = 0
 
+    private var p = Array<Byte>()
+    private var n = 0
+
     protected init(input: InputStream, decodeMap: HashMap<Byte, Byte>, encodeMap: HashMap<Byte, Byte>) {
         this.inputStream = input
         this.decodeMap = decodeMap
@@ -269,26 +272,8 @@ public class Base64InputStream <: InputStream {
     }
 
     public func readData(input: Array<Byte>, eofAsFinish!: Bool = true) : Int64 {
-        var p = input
-        var n = 0
-        func putDecode() {
-            if (pad > 0) {
-                while (p.size > 0 && decodedOff - pad > 0) {
-                    p[0] = decoded[3 - decodedOff]
-                    p = p[1..]
-                    n ++
-                    decodedOff--
-                }
-                return
-            }
-            var putCount = min([p.size, decodedOff]).getOrThrow()
-            for (i in 0..putCount) {
-                p[i] = decoded[3 - decodedOff +i]
-            }
-            p = p[putCount..]
-            n += putCount
-            decodedOff -= putCount
-        }
+        p = input
+        n = 0
         // last decode data not read over
         putDecode()
         var eof = false
@@ -342,6 +327,25 @@ public class Base64InputStream <: InputStream {
             }
         }
         n
+    }
+
+    private func putDecode() {
+        if (pad > 0) {
+            while (p.size > 0 && decodedOff - pad > 0) {
+                p[0] = decoded[3 - decodedOff]
+                p = p[1..]
+                n ++
+                decodedOff--
+            }
+            return
+        }
+        var putCount = min([p.size, decodedOff]).getOrThrow()
+        for (i in 0..putCount) {
+            p[i] = decoded[3 - decodedOff +i]
+        }
+        p = p[putCount..]
+        n += putCount
+        decodedOff -= putCount
     }
 
     public func readToEnd(eofAsFinish!: Bool = true) : Array<Byte> {
