@@ -6,17 +6,15 @@ import net.tls.*
 import std.regex.*
 import std.collection.*
 import encoding.base64.*
-import log.*
 import std.random.*
 import cj_mail.commons.*
 import std.convert.*
 import cj_mail.exception.*
+import cj_mail.log.*
 
 let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
 
 public class Smtp {
-
-   let logger = getGlobalLogger(("name", "cj_mail.smtp"))
 
    public var host: String = ""
    public var tlsPort: UInt16 = 587
@@ -29,7 +27,7 @@ public class Smtp {
 
    private func writeCommand(command: String) {
       let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
-      logger.trace("C: ${command}")
+      cjMailLogger.trace("C: ${command}", ("package", "cj_mail.smtp"))
       writer.write(command)
       writer.write("\r\n")
       writer.flush()
@@ -40,7 +38,7 @@ public class Smtp {
       let serverResponse = SmtpResponse()
       while (true) {
          var line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
-         logger.trace("S: ${line}")
+         cjMailLogger.trace("S: ${line}", ("package", "cj_mail.smtp"))
          match (responseBaseRegex.matches(line)) {
             case Some(r) =>
                let code = Int64.parse(r.matchStr(1))

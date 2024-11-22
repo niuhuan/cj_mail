@@ -7,7 +7,7 @@ import std.collection.*
 import std.io.*
 import cj_lombok.*
 import std.regex.*
-import log.*
+import cj_mail.log.*
 import cj_mail.commons.*
 import encoding.base64.*
 import cj_mail.exception.*
@@ -21,12 +21,10 @@ public class PopException <: Exception {
 
 public class Pop {
 
-    let logger = getGlobalLogger(("name", "cj_mail.pop"))
-
     public var host: String =  ""
     public var tlsPort: UInt16 = 995
 
-   public var connection: ?MailConnection = None
+    public var connection: ?MailConnection = None
 
     public func connect() {
         this.connection = defaultTlsConnect(host, tlsPort)
@@ -51,7 +49,7 @@ public class Pop {
     public func readCommand(): String {
         let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).reader
         let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
-        logger.trace("S: ${line}")
+        cjMailLogger.trace("S: ${line}", ("package", "cj_mail.smtp"))
         if (line.toAsciiLower().startsWith("-ERR")) {
             throw PopException(line)
         }
@@ -60,7 +58,7 @@ public class Pop {
 
     public func writeCommand(command: String) {
         let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
-        logger.trace("C: ${command}")
+        cjMailLogger.trace("C: ${command}", ("package", "cj_mail.smtp"))
         writer.write(command)
         writer.write("\r\n")
         writer.flush()

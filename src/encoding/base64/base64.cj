@@ -219,6 +219,7 @@ public class Base64OutputStream <: OutputStream {
                     output.write([encoded[0], encoded[1], encoded[2], encodeMap[64]])
                 }
             }
+            flush()
             isFinished = true
         } else if (writing.size > 0) {
             // !!! IMPORTANT !!! DO NOT DELETE THIS BLOCK !!! 
@@ -325,7 +326,12 @@ public class Base64InputStream <: InputStream {
         if (eof && eofAsFinish) {
             if (cachedSize != 0) {
                 if (cachedSize == 1) {
-                    throw MailContentParseException("eof but only one byte")
+                    if (cached[0] == encodeMap[64]) {
+                        cachedSize = 0
+                        return n
+                    } else {
+                        throw MailContentParseException("eof but only one byte : ${cached[0]} ")
+                    }
                 }
                 for (idx in cachedSize..4) {
                     cached[idx] = encodeMap[64]

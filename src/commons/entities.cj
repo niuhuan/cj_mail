@@ -5,13 +5,11 @@ import std.io.*
 import std.regex.*
 import cj_lombok.*
 import charset4cj.charset.*
-import log.*
+import cj_mail.log.*
 import cj_mail.encoding.base64.*
 import cj_mail.exception.*
 
-let logger = getGlobalLogger(("name", "cj_mail.commons"))
 let mailAddressPattern = Regex("^(.*)?<(.*)>$")
-
 
 /// MailAdress
 
@@ -347,7 +345,7 @@ public func parseMailContent(
                   case "boundary" => boundary = value
                   case "charset" => charset = value
                   case _ => 
-                        logger.debug("Ignore content type : ${key}")
+                        cjMailLogger.debug("Ignore content type : ${key}", ("package", "cj_mail.commons"))
                }
             case None =>
                continue

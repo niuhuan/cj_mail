@@ -1,7 +1,7 @@
 package cj_mail.imap
 
 import cj_mail.commons.*
-import log.*
+import cj_mail.log.*
 import net.tls.*
 import std.socket.*
 import cj_lombok.*
@@ -20,8 +20,6 @@ public class ImapException <: MailException {
 let fetchRegex = Regex("^\\* \\d+ FETCH [\\S\\s]+ \\{(\\d+)\\}$")
 
 public class Imap {
-
-    let logger = getGlobalLogger(("name", "cj_mail.imap"))
 
     public var host: String =  ""
     public var tlsPort: UInt16 = 993
@@ -49,7 +47,7 @@ public class Imap {
                 let builder = StringBuilder()
                 while(true) {
                     let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
-                    logger.trace("S: ${line}")
+                    cjMailLogger.trace("S: ${line}", ("package", "cj_mail.smtp"))
                     builder.append(line)
                     builder.append("\r\n")
                     if (line.startsWith("* ")) {
@@ -58,10 +56,10 @@ public class Imap {
                              match(matcher.find()) {
                                     case Some(s) =>
                                         let len = Int64.parse(s.matchStr(1))
-                                        logger.trace(".. for read Rune * ${len} from server ..")
+                                        cjMailLogger.trace(".. for read Rune * ${len} from server ..", ("package", "cj_mail.smtp"))
                                         builder.append(String.fromUtf8(reader.readSize(len)))
                                         let left = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
-                                        logger.trace(".. line left : ${left} ..")
+                                        cjMailLogger.trace(".. line left : ${left} ..", ("package", "cj_mail.smtp"))
                                         builder.append(left)
                                         builder.append("\r\n")
                                     case None => ()
@@ -80,14 +78,14 @@ public class Imap {
                 throw Exception("Unreachable")
             case None=>
                     let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
-                    logger.trace("S: ${line}")
+                    cjMailLogger.trace("S: ${line}", ("package", "cj_mail.smtp"))
                     return line
         }
     }
 
    public func writeCommand(command: String) {
         let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
-        logger.trace("C: ${command}")
+        cjMailLogger.trace("C: ${command}", ("package", "cj_mail.smtp"))
         writer.write(command)
         writer.write("\r\n")
         writer.flush()
