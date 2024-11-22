@@ -36,13 +36,10 @@ cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 import cj_mail.*
 
 main(): Int64 {
-   let smtp = Smtp()
-   smtp.host = "smtp.mail.com"
-   smtp.tlsPort = 465
-   smtp.connect()
+   let smtp = Smtp("smtp.mail.com")
    smtp.plain("niuhuan@mail.com", "mailPassword") 
    smtp.send(textMail())
-   smtp.disconnect()
+   smtp.close()
    return 0
 }
 
@@ -64,10 +61,7 @@ func textMail(): SendMail {
 
 ```cangjie
 main() : Int64{
-    let pop = Pop()
-    pop.host = "pop3.mail.com"  
-    pop.tlsPort = 995
-    pop.connect()  
+    let pop = Pop("pop3.mail.com")
     pop.auth("niuhuan@mail.com", "password")
     let(count, mails) = pop.list()  
     let mailIndex = mails[0][0]
@@ -85,10 +79,7 @@ main() : Int64{
 
 ```cangjie
 main(): Int64 {
-    let imap = Imap()
-    imap.host = "imap.mail.com"  
-    imap.tlsPort = 993
-    imap.connect()
+    let imap = Imap("imap.mail.com")
     imap.login("niuhuan@mail.com", "password")
     imap.select("INBOX")
     // 列出收件箱中的邮件

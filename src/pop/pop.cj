@@ -12,28 +12,59 @@ import cj_mail.commons.*
 import encoding.base64.*
 import cj_mail.exception.*
 
-let popStatePattern = Regex("^\\+OK (\\d+) (\\d+)$")
+private let popStatePattern = Regex("^\\+OK (\\d+) (\\d+)$")
+private let defaultTlsPort: UInt16 = 995
 
 @AllArgsConstructor
 public class PopException <: Exception {
     public var serverResponse: String
 }
 
-public class Pop {
+public class Pop <: Resource {
 
-    public var host: String =  ""
-    public var tlsPort: UInt16 = 995
+    public var connection: MailConnection
 
-    public var connection: ?MailConnection = None
-
-    public func connect() {
-        this.connection = defaultTlsConnect(host, tlsPort)
-        readCommand() // Server Hello
+    public init(connection: MailConnection) {
+        this.connection = connection
+        readCommand()
     }
 
-    public func connect(socket: StreamingSocket) {
-        this.connection = mailConnection(socket)
-        readCommand() // Server Hello
+    public init(socket: StreamingSocket) {
+        this(mailConnection(socket))
+    }
+
+    public init(host: String, port: UInt16) {
+        this(defaultTlsConnect(host, port))
+    }
+
+    public init(host: String) {
+        this(host, defaultTlsPort)
+    }
+    
+    public func close() {
+            connection.disconnect()
+    }
+
+    public func isClosed(): Bool {
+        connection.isClosed()
+    }
+
+    public func readCommand(): String {
+        let reader = this.connection.reader
+        let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
+        cjMailLogger.trace("S: ${line}", ("package", "cj_mail.smtp"))
+        if (line.toAsciiLower().startsWith("-ERR")) {
+            throw PopException(line)
+        }
+        line
+    }
+
+    public func writeCommand(command: String) {
+        let writer = this.connection.writer
+        cjMailLogger.trace("C: ${command}", ("package", "cj_mail.smtp"))
+        writer.write(command)
+        writer.write("\r\n")
+        writer.flush()
     }
 
     public func noop() {
@@ -44,24 +75,6 @@ public class Pop {
     public func rest() {
         writeCommand("RSET")
         readCommand()
-    }
-
-    public func readCommand(): String {
-        let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).reader
-        let line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
-        cjMailLogger.trace("S: ${line}", ("package", "cj_mail.smtp"))
-        if (line.toAsciiLower().startsWith("-ERR")) {
-            throw PopException(line)
-        }
-        line
-    }
-
-    public func writeCommand(command: String) {
-        let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
-        cjMailLogger.trace("C: ${command}", ("package", "cj_mail.smtp"))
-        writer.write(command)
-        writer.write("\r\n")
-        writer.flush()
     }
 
     public func apop(username: String, password: String) {
@@ -183,10 +196,6 @@ public class Pop {
    public func quit() {
       writeCommand("QUIT")
       readCommand()
-   }
-
-   public func disconnect() {
-         connection.getOrThrow({=>MailConnectExcption("Not connected")}).disconnect()
    }
     
 }

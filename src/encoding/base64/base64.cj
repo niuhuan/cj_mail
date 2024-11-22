@@ -277,7 +277,7 @@ public class Base64InputStream <: InputStream {
         // last decode data not read over
         putDecode()
         var eof = false
-        while (p.size > 0) {
+        while (p.size > n) {
             var read = inputStream.read(cached[cachedSize..])
             if (read == 0) {
                 eof = true
@@ -306,7 +306,7 @@ public class Base64InputStream <: InputStream {
             }
         }
         // read full or eof
-        if (p.size == 0) {
+        if (p.size == n) {
             return n
         }
         if (eof && eofAsFinish) {
@@ -329,21 +329,19 @@ public class Base64InputStream <: InputStream {
         n
     }
 
-    private func putDecode() {
+    func putDecode() {
         if (pad > 0) {
-            while (p.size > 0 && decodedOff - pad > 0) {
-                p[0] = decoded[3 - decodedOff]
-                p = p[1..]
-                n ++
+            while (p.size - n > 0 && decodedOff - pad > 0) {
+                p[n] = decoded[3 - decodedOff]
+                n++
                 decodedOff--
             }
             return
         }
-        var putCount = min([p.size, decodedOff]).getOrThrow()
+        var putCount = min([p.size - n, decodedOff]).getOrThrow()
         for (i in 0..putCount) {
-            p[i] = decoded[3 - decodedOff +i]
+            p[n + i] = decoded[3 - decodedOff +i]
         }
-        p = p[putCount..]
         n += putCount
         decodedOff -= putCount
     }

@@ -7,10 +7,9 @@ import std.time.*
 import net.tls.*
 import compress.zlib.*
 import cj_mail.exception.*
-
 import cj_lombok.*
 
-public class MailConnection {
+public class MailConnection <: Resource{
 
     private var socket: StreamingSocket
     public var reader: StreamReader 
@@ -22,12 +21,20 @@ public class MailConnection {
         this.writer = StreamWriter(socket)
     }
 
-    public func disconnect() {
-        socket.close()
-    }
-
     public func flush() {
         socket.flush()
+    }
+
+    public func disconnect() {
+        close()
+    }
+
+    public func isClosed(): Bool {
+        socket.isClosed()
+    }
+
+    public func close() {
+        socket.close()
     }
 
 }

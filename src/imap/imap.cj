@@ -17,15 +17,39 @@ public class ImapException <: MailException {
    public var response: String
 }
 
-let fetchRegex = Regex("^\\* \\d+ FETCH [\\S\\s]+ \\{(\\d+)\\}$")
+private let fetchRegex = Regex("^\\* \\d+ FETCH [\\S\\s]+ \\{(\\d+)\\}$")
+private let defaultTlsPort: UInt16 = 993
 
-public class Imap {
+public class Imap <: Resource{
 
-    public var host: String =  ""
-    public var tlsPort: UInt16 = 993
-    public var connection: ?MailConnection = None
-    private var cmdIdx = 0;
+    private var cmdIdx = 0
+    public var connection: MailConnection
     // private var inDeflate = false
+
+    public init(connection: MailConnection) {
+        this.connection = connection
+        readCommand(None) // Server Hello
+    }
+
+    public init(socket: StreamingSocket) {
+        this(mailConnection(socket))
+    }
+
+    public init(host: String, port: UInt16) {
+        this(defaultTlsConnect(host, port))
+    }
+
+    public init(host: String) {
+        this(host, defaultTlsPort)
+    }
+    
+    public func close() {
+            connection.disconnect()
+    }
+
+    public func isClosed(): Bool {
+        connection.isClosed()
+    }
 
     public func nextCmdIdx() {
         cmdIdx += 1
@@ -41,7 +65,7 @@ public class Imap {
     }
 
     public func readCommand(cmdIdx: Option<String>): String {
-        let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).reader
+        let reader = this.connection.reader
         match (cmdIdx) {
             case Some(cmdIdx)=>
                 let builder = StringBuilder()
@@ -84,21 +108,11 @@ public class Imap {
     }
 
    public func writeCommand(command: String) {
-        let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
+        let writer = this.connection.writer
         cjMailLogger.trace("C: ${command}", ("package", "cj_mail.smtp"))
         writer.write(command)
         writer.write("\r\n")
         writer.flush()
-    }
-
-    public func connect() {
-      this.connection = defaultTlsConnect(host, tlsPort)
-      readCommand(None) // Server Hello
-    }
-
-    public func connect(socket: StreamingSocket) {
-        this.connection = mailConnection(socket)
-        readCommand(None) // Server Hello
     }
 
     public func login(username: String, password: String) {
@@ -256,10 +270,6 @@ public class Imap {
         let idx = nextCmdIdx();
         writeCommand("${idx} LOGOUT")
         readCommand(idx)
-    }
-
-    public func disconnect() {
-        this.connection.getOrThrow().disconnect()
     }
 
     // public func deflate() {

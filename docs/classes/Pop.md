@@ -5,10 +5,7 @@ Class Pop
 
 ```cangjie
 main() : Int64{
-    let pop = Pop()
-    pop.host = "pop3.mail.com"  
-    pop.tlsPort = 995
-    pop.connect()  
+    let pop = Pop("pop3.mail.com")
     pop.auth("niuhuan@mail.com", "password")
     let(count, mails) = pop.list()  
     let mailIndex = mails[0][0]
@@ -24,8 +21,8 @@ main() : Int64{
 
 | 函数 | 说明 |
 | -- | :-- |
-| connect | 连接
-| disconnect | 断开链接
+| isClose | 是否断开链接
+| close | 断开链接
 | auth | `USER` `PASS` 方式认证
 | apop | `APOP` 方式认证（不是所有服务器都支持）
 | quit | `QUIT` 命令

@@ -12,21 +12,41 @@ import std.convert.*
 import cj_mail.exception.*
 import cj_mail.log.*
 
-let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
+private let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
+private let defaultTlsPort: UInt16 = 587
 
-public class Smtp {
-
-   public var host: String = ""
-   public var tlsPort: UInt16 = 587
+public class Smtp <: Resource{
 
    public var authTypes: Array<String> = []
-   public var connection: ?MailConnection = None
+   public var connection: MailConnection
 
-   public init(){
+   public init(connection: MailConnection) {
+      this.connection = connection
+      smtpInit()
+   }
+
+   public init(socket: StreamingSocket) {
+      this(mailConnection(socket))
+   }
+
+   public init(host: String, port: UInt16) {
+      this(defaultTlsConnect(host, port))
+   }
+
+   public init(host: String) {
+      this(host, defaultTlsPort)
+   }
+   
+   public func close() {
+         connection.disconnect()
+   }
+
+   public func isClosed(): Bool {
+      connection.isClosed()
    }
 
    private func writeCommand(command: String) {
-      let writer = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).writer
+      let writer = this.connection.writer
       cjMailLogger.trace("C: ${command}", ("package", "cj_mail.smtp"))
       writer.write(command)
       writer.write("\r\n")
@@ -34,7 +54,7 @@ public class Smtp {
    }
 
    private func readCommand() : SmtpResponse {
-      let reader = this.connection.getOrThrow({=>MailConnectExcption("Not connected")}).reader
+      let reader = this.connection.reader
       let serverResponse = SmtpResponse()
       while (true) {
          var line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
@@ -70,19 +90,9 @@ public class Smtp {
       throw MailContentParseException("Invalid response")
    }
 
-   public func connect() {
-      this.connection = defaultTlsConnect(host, tlsPort)
-      smtpInit()
-   }
-
-   public func connect(socket: StreamingSocket) {
-      this.connection = mailConnection(socket)
-      smtpInit()
-   }
-
    private func smtpInit() {
       readCommand() // Server Hello
-      writeCommand("EHLO ${host}")
+      writeCommand("EHLO")
       let ehloResponse = readCommand()
       for (msg in ehloResponse.message.split("\n")) {
          if (msg.startsWith("AUTH ")) {
@@ -253,7 +263,4 @@ public class Smtp {
       readCommand()
    }
 
-   public func disconnect() {
-         connection.getOrThrow({=>MailConnectExcption("Not connected")}).disconnect()
-   }
 }

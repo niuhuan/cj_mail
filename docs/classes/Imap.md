@@ -3,10 +3,7 @@ class Imap
 
 ```cangjie
 main(): Int64 {
-    let imap = Imap()
-    imap.host = "imap.mail.com"  
-    imap.tlsPort = 993
-    imap.connect()
+    let imap = Imap("imap.mail.com")
     imap.login("niuhuan@mail.com", "password")
     imap.select("INBOX")
     // 列出收件箱中的邮件
@@ -22,8 +19,8 @@ main(): Int64 {
 
 | 函数 | 说明 |
 | -- | :-- |
-| connect | 连接
-| disconnect | 断开链接
+| isClose | 是否断开链接
+| close | 断开链接
 | login | `LOGIN` 方式认证
 | select | `SELECT` 命令 , 选择文件夹
 | examine | `EXAMINE` 命令 , 选择文件夹 (只读)
