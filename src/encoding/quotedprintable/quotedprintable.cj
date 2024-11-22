@@ -321,14 +321,14 @@ public class QuotedPrintableInputStream <: InputStream {
                     throw MailContentParseException("Invalid quoted-printable encoding")
                 }
                 p[0] = (fromHex(lineArray[1]) << 4) | fromHex(lineArray[2])
-                p = p[1..]
-                lineArray = lineArray[3..]
                 n++
+                p = buffer[n..]
+                lineArray = lineArray[3..]
             } else {
                 p[0] = lineArray[0]
-                p = p[1..]
-                lineArray = lineArray[1..]
                 n++
+                p = buffer[n..]
+                lineArray = lineArray[1..]
             }
         }
         n
