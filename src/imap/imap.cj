@@ -136,7 +136,7 @@ public class Imap {
         result
     }
 
-    public func fetchRaw(sequenceSet: Option<String>, dataItems: String, withUid: Bool): (String, String) {
+    public func fetch(sequenceSet: Option<String>, dataItems: String, withUid: Bool): (String, String) {
         let idx = nextCmdIdx()
         let sequenceSetValue = match (sequenceSet) {
             case Some(value) => value
@@ -152,22 +152,36 @@ public class Imap {
         (idx, readCommand(idx))
     }
 
-    public func fetchFull(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
+    public func fetchFullParse(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
         let mails = ArrayList<(Int64, ReceiveMail)>()
-        let (idx, response) = fetchRaw(sequenceSet, "(UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])", withUid)
+        let (idx, response) = fetch(sequenceSet, "(UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])", withUid)
         parseImapMailResponses(idx, response, skipHeaders: true)
     }
 
-    public func fetchFull(sequenceSet: Option<String>): ArrayList<ImapReceiveMail> {
-        fetchFull(sequenceSet, false)
+    public func fetchFullParse(sequenceSet: Option<String>): ArrayList<ImapReceiveMail> {
+        fetchFullParse(sequenceSet, false)
     }
 
-    public func fetchFull(): ArrayList<ImapReceiveMail> {
-        fetchFull(None)
+    public func fetchFullParse(): ArrayList<ImapReceiveMail> {
+        fetchFullParse(None)
+    }
+
+    public func fetchFullTextBody(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
+        let mails = ArrayList<(Int64, ReceiveMail)>()
+        let (idx, response) = fetch(sequenceSet, "(UID FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY BODY[TEXT])", withUid)
+        parseImapMailResponses(idx, response, skipHeaders: true, textBody: true)
+    }
+
+    public func fetchFullTextBody(sequenceSet: Option<String>): ArrayList<ImapReceiveMail> {
+        fetchFullTextBody(sequenceSet, false)
+    }
+
+    public func fetchFullTextBody(): ArrayList<ImapReceiveMail> {
+        fetchFullTextBody(None)
     }
 
     public func fetchInfo(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
-        let (idx, response) = fetchRaw(
+        let (idx, response) = fetch(
             sequenceSet, 
             "(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Content-Type)])",
             withUid
@@ -184,7 +198,7 @@ public class Imap {
     }
 
     public func fetchFlags(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
-        let (idx, response) = fetchRaw(sequenceSet, "(UID FLAGS)", withUid)
+        let (idx, response) = fetch(sequenceSet, "(UID FLAGS)", withUid)
         parseImapMailResponses(idx, response)
     }
 
@@ -267,13 +281,16 @@ private func escapingDoubleQuote(str: String): String {
     str.replace("\"", "\\\"")
 }
 
-private func parseImapMailResponses(idx: String, response: String, skipHeaders!: Bool = false): ArrayList<ImapReceiveMail> {
+private func parseImapMailResponses(
+    idx: String, response: String,
+    skipHeaders!: Bool = false, textBody!: Bool = false
+): ArrayList<ImapReceiveMail> {
         let reader = StreamReader(ByteArrayStream.fromString(response))
         let mails = ArrayList<ImapReceiveMail>()
         while(true) {
             let line = reader.readln().getOrThrow({=>MailContentParseException()})
             if (line.startsWith("* ")) {
-                mails.append(parseImapMail(line, reader, skipHeaders: skipHeaders))
+                mails.append(parseImapMail(line, reader, skipHeaders: skipHeaders, textBody: textBody))
             } else if (line.startsWith("${idx} ")) {
                 break
             } else {
@@ -285,7 +302,10 @@ private func parseImapMailResponses(idx: String, response: String, skipHeaders!:
         mails
 }
 
-private func parseImapMail(line: String, reader: StreamReader, skipHeaders!: Bool = false): ImapReceiveMail {
+private func parseImapMail(
+    line: String, reader: StreamReader,
+    skipHeaders!: Bool = false, textBody!: Bool = false
+): ImapReceiveMail {
     var lineReader = StreamReader(ByteArrayStream.fromString(line.trimAscii()))
     let mail = ImapReceiveMail()
     if (lineReader.readRune().getOrThrow({=>MailContentParseException()}) != r"*") {
@@ -417,28 +437,32 @@ private func parseImapMail(line: String, reader: StreamReader, skipHeaders!: Boo
                 throw MailContentParseException()
             }
             let mailData = reader.readSize(byteCount)
-            let str = String.fromUtf8(mailData)
-            let (from, to, cc, bcc, subject, data) = parseMailContent(
-                str,
-                imapSetContentType: imapSetContentType,
-                imapSetContentTransferEncoding: imapSetContentTransferEncoding,
-                skipHeaders: skipHeaders
-            )
-            if (from != "") {
-                mail.from = parseMailAddress(from)
-            }
-            if (to != "") {
-                mail.to = parseMailAddresses(to)
-            }
-            if (cc != "") {
-                mail.cc = parseMailAddresses(cc)
-            }
-            if (bcc != "") {
-                mail.bcc = parseMailAddresses(bcc)
-            }
-            mail.subject = subject
-            mail.data = data
             lineReader = StreamReader(ByteArrayStream.fromString(reader.readln().getOrThrow({=>MailConnectExcption()})))
+            let str = String.fromUtf8(mailData)
+            if (textBody) {
+                mail.data = str
+            } else {
+                let (from, to, cc, bcc, subject, data) = parseMailContent(
+                    str,
+                    imapSetContentType: imapSetContentType,
+                    imapSetContentTransferEncoding: imapSetContentTransferEncoding,
+                    skipHeaders: skipHeaders
+                )
+                if (from != "") {
+                    mail.from = parseMailAddress(from)
+                }
+                if (to != "") {
+                    mail.to = parseMailAddresses(to)
+                }
+                if (cc != "") {
+                    mail.cc = parseMailAddresses(cc)
+                }
+                if (bcc != "") {
+                    mail.bcc = parseMailAddresses(bcc)
+                }
+                mail.subject = subject
+                mail.data = data
+            }
         } else {
             throw MailContentParseException(
                 "not match imap item name",
