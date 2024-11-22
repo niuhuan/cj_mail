@@ -30,5 +30,6 @@ main(): Int64 {
 | search | `SEARCH` 搜索邮件
 | fetchRaw | 获取邮件、返回 (命令编码, 原文)
 | fetchInfo | 获取邮件基本信息（不返回正文）
+| fetchFlags | 获取邮件标志信息（不返回正文）
 | store | `STORE` 对邮件增减标记（已读、标星）或删除邮件
 | quit | `QUIT`

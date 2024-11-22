@@ -183,6 +183,11 @@ public class Imap {
         fetchInfo(None)
     }
 
+    public func fetchFlags(sequenceSet: Option<String>, withUid: Bool): ArrayList<ImapReceiveMail> {
+        let (idx, response) = fetchRaw(sequenceSet, "(UID FLAGS)", withUid)
+        parseImapMailResponses(idx, response)
+    }
+
     public func store(
         sequenceSet: Option<String>,
         storeType: StoreType,
