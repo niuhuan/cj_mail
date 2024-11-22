@@ -146,6 +146,11 @@ public class Smtp {
          if (data.contentId != "") {
             writeCommand("Content-ID: <${data.contentId}>")
          }
+         if (!data.headers.isEmpty()) {
+            for (header in data.headers) {
+               writeCommand("${header[0]}: ${header[1]}")
+            }
+         }
          writeCommand("")
          writeCommand(toBase64String(data.text.toArray()))
       } else if (let Some(data) <- mailData as MimeFile) {
@@ -156,6 +161,11 @@ public class Smtp {
          writeCommand("Content-Transfer-Encoding: base64")
          if (data.contentId != "") {
             writeCommand("Content-ID: <${data.contentId}>")
+         }
+         if (!data.headers.isEmpty()) {
+            for (header in data.headers) {
+               writeCommand("${header[0]}: ${header[1]}")
+            }
          }
          writeCommand("")
          writeCommand(toBase64String(data.data.toArray()))
