@@ -68,7 +68,7 @@ main() : Int64{
     let mail = pop.retrParse(mailIndex) 
     let(size,text) = pop.retr(mailIndex) 
     pop.quit()
-    pop.disconnect()
+    pop.close()
     0
 }
 ```
