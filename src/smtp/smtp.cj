@@ -13,24 +13,24 @@ import cj_mail.exception.*
 import cj_mail.log.*
 
 private let responseBaseRegex = Regex("^(\\d\\d\\d)([\\- ])([\\S\\s]+)$")
-private let defaultTlsPort: UInt16 = 587
+private let defaultTlsPort: UInt16 = 465
 
 public class Smtp <: Resource{
 
    public var authTypes: Array<String> = []
    public var connection: MailConnection
 
-   public init(connection: MailConnection) {
+   public init(connection: MailConnection, domain: String) {
       this.connection = connection
-      smtpInit()
+      smtpInit(domain)
    }
 
-   public init(socket: StreamingSocket) {
-      this(mailConnection(socket))
+   public init(socket: StreamingSocket, domain: String) {
+      this(mailConnection(socket), domain)
    }
 
    public init(host: String, port: UInt16) {
-      this(defaultTlsConnect(host, port))
+      this(defaultTlsConnect(host, port), host)
    }
 
    public init(host: String) {
@@ -70,7 +70,7 @@ public class Smtp <: Resource{
                   throw  MailContentParseException("Inconsistent code", line)
                }
                if (serverResponse.message != "") {
-                  serverResponse.message += "\n"
+                  serverResponse.message += "\r\n"
                }
                serverResponse.message += message
                if (minusOrSp == " ") {
@@ -90,11 +90,11 @@ public class Smtp <: Resource{
       throw MailContentParseException("Invalid response")
    }
 
-   private func smtpInit() {
+   private func smtpInit(domain: String) {
       readCommand() // Server Hello
-      writeCommand("EHLO")
+      writeCommand("EHLO ${domain}")
       let ehloResponse = readCommand()
-      for (msg in ehloResponse.message.split("\n")) {
+      for (msg in ehloResponse.message.split("\r\n")) {
          if (msg.startsWith("AUTH ")) {
             this.authTypes = msg.split(" ")
          }
@@ -141,7 +141,7 @@ public class Smtp <: Resource{
       if (let Some(data) <- mailData as String) {
          putMailAddressesSubject(from, to, cc, bcc, subject)
          writeCommand("")
-         for (line in data.split("\n")) {
+         for (line in data.split("\r\n")) {
             if (line == ".") {
                writeCommand("&#46;")
             } else {
