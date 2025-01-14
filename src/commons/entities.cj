@@ -50,7 +50,7 @@ public func parseMailAddresses(addresses: String): ArrayList<MailAddress> {
       if (text == "") {
          continue
       }
-      result.append(parseMailAddress(text))
+      result.add(parseMailAddress(text))
    }
    result
 }
@@ -232,7 +232,7 @@ public class MimeMutilParts <: Collection<MailContent> & MailContent {
    }
 
    public func append(part: MailContent) {
-      parts.append(part)
+      parts.add(part)
    }
 
    public func toString(): String {
@@ -263,7 +263,7 @@ public func parseMailContent(
    var contentTransferEncoding =""
    var headers = ArrayList<(String, String)>()
    // read header
-   var lines = StringReader(ByteArrayStream.fromString(content))
+   var lines = StringReader(ByteBuffer(content.toArray()))
    // foreach Header
    var headerLine = ""
    func parseHeader() {
@@ -286,7 +286,7 @@ public func parseMailContent(
             case "Content-Type" => contentType = value
             case "Content-Transfer-Encoding" => contentTransferEncoding = value
             case _ => 
-                  headers.append((key, value))
+                  headers.add((key, value))
       }
       headerLine = ""
    }
@@ -413,8 +413,8 @@ public func parseMailContent(
                                  builder.append(lineOff)
                                  builder.append("\r\n")
                            }
-                           lines = StringReader(ByteArrayStream.fromString(builder.toString()))
-                           boundary = line.trimLeft("--").trimRight("--")
+                           lines = StringReader(ByteBuffer(builder.toString().toArray()))
+                           boundary = line.trimStart("--").trimEnd("--")
                            break
                         } else {
                            builder.append(line)
@@ -477,8 +477,8 @@ public func parseBase64MailContent(content: String): Array<Byte> {
 }
 
 public func parseQuotedPrintableMailContent(content: String): Array<Byte> {
-   let builder = ByteArrayStream()
-   let reader = StringReader(ByteArrayStream.fromString(content.trimAscii()))
+   let builder = ByteBuffer()
+   let reader = StringReader(ByteBuffer(content.trimAscii().toArray()))
    while(let Some(rune) <- reader.read()) {
       if (rune == r'=') {
          let next =String([

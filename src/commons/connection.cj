@@ -1,7 +1,7 @@
 package cj_mail.commons
 
 import std.collection.*
-import std.socket.*
+import std.net.*
 import std.io.*
 import std.time.*
 import net.tls.*
@@ -61,7 +61,7 @@ public class StreamReader {
             let idx = readBuff[readToBuffPosition..writeToBuffPosition].indexOf("\n".toArray()[0])
             match (idx) {
                 case Some(idx) =>
-                    builder.appendAll(readBuff[readToBuffPosition..(readToBuffPosition + idx + 1)])
+                    builder.add(all: readBuff[readToBuffPosition..(readToBuffPosition + idx + 1)])
                     readToBuffPosition = readToBuffPosition + idx + 1
                     var i = 0
                     while (readToBuffPosition < writeToBuffPosition) {
@@ -71,10 +71,10 @@ public class StreamReader {
                     }
                     writeToBuffPosition = i
                     readToBuffPosition = 0
-                    let str = String.fromUtf8(builder.toArray()).trimRight("\n").trimRight("\r")
+                    let str = String.fromUtf8(builder.toArray()).trimEnd("\n").trimEnd("\r")
                     return str
                 case None =>
-                    builder.appendAll(readBuff[readToBuffPosition..writeToBuffPosition])
+                    builder.add(all: readBuff[readToBuffPosition..writeToBuffPosition])
                     readToBuffPosition = 0
                     writeToBuffPosition = inputStream.read(readBuff)
                     if (writeToBuffPosition == 0) {
@@ -145,19 +145,19 @@ public class StreamReader {
             case Some(b) => b
             case None => return None
         }
-        builder.append(readByte)
+        builder.add(readByte)
         //  # 0xxxxxxx  # 110xxxxx  # 1110xxxx # 11110xxx
         if ((readByte & 0b10000000) == 0) {
             //
         } else if ((readByte & 0b11100000) == 0b11000000) {
-            builder.append(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
+            builder.add(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
         } else if ((readByte & 0b11110000) == 0b11100000) {
-            builder.append(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
-            builder.append(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
+            builder.add(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
+            builder.add(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
         } else if ((readByte & 0b11111000) == 0b11110000) {
-            builder.append(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
-            builder.append(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
-            builder.append(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
+            builder.add(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
+            builder.add(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
+            builder.add(this.readByte().getOrThrow({=>MailContentParseException("eof")}))
         } else {
             throw MailContentParseException("invalid utf8")
         }
@@ -205,7 +205,7 @@ public func defaultTlsConnect(host: String, port: UInt16): MailConnection {
     socket.readTimeout = Duration.second * 30
     socket.connect()
     let tls = try {
-    var config = TlsClientConfig()
+        var config = TlsClientConfig()
         config.domain = host
         config.verifyMode = TrustAll
         TlsSocket.client(socket, clientConfig: config)

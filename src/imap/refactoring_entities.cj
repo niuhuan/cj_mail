@@ -67,15 +67,15 @@ func parseList(reader: StreamReader): ImapValue {
             case ")" =>
                 break
             case r"(" =>
-                values.append(parseList(reader))
+                values.add(parseList(reader))
             case r"\"" =>
-                values.append(parseString(reader))
+                values.add(parseString(reader))
             case "N" =>
-                values.append(parseNil(StringBuilder("N"), reader))
+                values.add(parseNil(StringBuilder("N"), reader))
             case _ =>
                 if (rune >= r'0' && rune <= r'9') {
                     let (value, end) = parseNumber(StringBuilder(rune), reader)
-                    values.append(value)
+                    values.add(value)
                     if (end) {
                         break
                     }

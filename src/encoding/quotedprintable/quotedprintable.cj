@@ -46,11 +46,11 @@ public class QuotedPrintable {
     }
 
     public func encodeToString(data: Array<Byte>): String {
-        let buffStream = ByteArrayStream()
+        let buffStream = ByteBuffer()
         let qpoStream = QuotedPrintableOutputStream(buffStream)
         qpoStream.write(data)
         qpoStream.flushLine()
-        String.fromUtf8(buffStream.readToEnd())
+        String.fromUtf8(buffStream.bytes())
     }
 
     public func decodeFromString(data: String): Array<Byte> {
@@ -60,7 +60,7 @@ public class QuotedPrintable {
 
 public class QuotedPrintableEncoder {
     
-    let buffStream = ByteArrayStream()
+    let buffStream = ByteBuffer()
     let qpoStream = QuotedPrintableOutputStream(buffStream)
     private var isFinished = false
 
@@ -81,7 +81,7 @@ public class QuotedPrintableEncoder {
             isFinished = true
         }
         qpoStream.flush()
-        let result = buffStream.readToEnd()
+        let result = buffStream.bytes()
         buffStream.clear()
         result
     }
@@ -94,9 +94,9 @@ public class QuotedPrintableEncoder {
 
 public class QuotedPrintableDecoder {
 
-    private let buffStream = ByteArrayStream()
+    private let buffStream = ByteBuffer()
     private let qpiStream = QuotedPrintableInputStream(buffStream)
-    private let resultStream = ByteArrayStream()
+    private let resultStream = ByteBuffer()
     private let buffer = Array<Byte>(1<<10, {_=>0})
     private var isFinished = false
 
@@ -119,7 +119,7 @@ public class QuotedPrintableDecoder {
         if (finish) {
             isFinished = true
         }
-        let result = resultStream.readToEnd()
+        let result = resultStream.bytes()
         resultStream.clear()
         buffStream.clear()
         result
@@ -291,7 +291,7 @@ public class QuotedPrintableInputStream <: InputStream {
                 match (reader.readUntil({rune => rune == r'\n'})) {
                     case Some(line) =>
                         let list = ArrayList<Byte>(lineArray)
-                        list.appendAll(line.toArray())
+                        list.add(all: line.toArray())
                         lineArray = list.toArray()
                         perignoreEof = false
                     case None =>

@@ -18,7 +18,7 @@ public abstract class MailException <: Exception {
         line1: String
     ) {
         super(message)
-        lines.append(line1)
+        lines.add(line1)
     }
 
     public init(
@@ -27,8 +27,8 @@ public abstract class MailException <: Exception {
         line2: String
     ) {
         super(message)
-        lines.append(line1)
-        lines.append(line2)
+        lines.add(line1)
+        lines.add(line2)
     }
 
     public init(

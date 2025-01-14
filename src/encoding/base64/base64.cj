@@ -86,7 +86,7 @@ public class Base64 {
 
 public class Base64Encoder {
 
-    private let bufferStream: ByteArrayStream
+    private let bufferStream: ByteBuffer
     private let encodeSream: Base64OutputStream
 
     public prop finished: Bool {
@@ -94,13 +94,13 @@ public class Base64Encoder {
     }
 
     protected init(encodeMap: HashMap<Byte, Byte>, wrap!: Bool = false) {
-        bufferStream = ByteArrayStream()
+        bufferStream = ByteBuffer()
         encodeSream = Base64OutputStream(bufferStream, encodeMap, wrap: wrap)
     }
 
     public func encode(input: Array<Byte>, finish!: Bool = false) : Array<Byte> {
         encodeSream.writeData(input, finish: finish)
-        let result = bufferStream.readToEnd()
+        let result = bufferStream.bytes()
         bufferStream.clear()
         result
     }
@@ -117,7 +117,7 @@ public class Base64Encoder {
 
 public class Base64Decoder {
 
-    private let bufferStream: ByteArrayStream
+    private let bufferStream: ByteBuffer
     private let decodeStream: Base64InputStream
     private var isFinished = false
     public prop finished: Bool {
@@ -127,7 +127,7 @@ public class Base64Decoder {
     }
 
     protected init(decodeMap: HashMap<Byte, Byte>, encodeMap: HashMap<Byte, Byte>) {
-        bufferStream = ByteArrayStream()
+        bufferStream = ByteBuffer()
         decodeStream = Base64InputStream(bufferStream, decodeMap, encodeMap)
     }
 
@@ -198,10 +198,10 @@ public class Base64OutputStream <: OutputStream {
         writing = if (writing.size == 0) {
             data
         } else {
-            let bos = ByteArrayStream()
+            let bos = ByteBuffer()
             bos.write(writing)
             bos.write(data)
-            bos.readToEnd()
+            bos.bytes()
         }
         while (writing.size >= 3) {
             encode()
@@ -347,7 +347,7 @@ public class Base64InputStream <: InputStream {
     }
 
     public func readToEnd(eofAsFinish!: Bool = true) : Array<Byte> {
-        var result = ByteArrayStream()
+        var result = ByteBuffer()
         var buff = Array<Byte>(1024, {_=>0})
         var read = 0
         while (true) {
@@ -357,7 +357,7 @@ public class Base64InputStream <: InputStream {
             }
             result.write(buff[0..read])
         }
-        result.readToEnd()
+        result.bytes()
     }
 
     private func decode() {

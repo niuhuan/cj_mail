@@ -2,7 +2,7 @@
 package cj_mail.pop
 
 import net.tls.*
-import std.socket.*
+import std.net.*
 import std.collection.*
 import std.io.*
 import std.regex.*
@@ -105,8 +105,7 @@ public class Pop <: Resource {
         let line = readCommand()
         match (popStatePattern.matches(line)) {
             case Some(r) =>
-                let count = Int64.parse(r.matchStr(1))
-                count
+                Int64.parse(r.matchStr(1))
             case None =>
                 throw Exception("Invalid response")
         }
@@ -135,7 +134,7 @@ public class Pop <: Resource {
             }
             let msg = Int64.parse(parts[0])
             let size = Int64.parse(parts[1])
-            mails.append((msg, size))
+            mails.add((msg, size))
         }
         (count, mails)
     }

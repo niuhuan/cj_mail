@@ -1,6 +1,6 @@
 package cj_mail.smtp
 
-import std.socket.*
+import std.net.*
 import std.io.*
 import net.tls.*
 import std.regex.*
@@ -103,10 +103,10 @@ public class Smtp <: Resource{
    
    public func plain(username: String, password: String) {
       var arrList = ArrayList<Byte>()
-      arrList.append(0)
-      arrList.appendAll(username.toArray())
-      arrList.append(0)
-      arrList.appendAll(password.toArray())
+      arrList.add(0)
+      arrList.add(all: username.toArray())
+      arrList.add(0)
+      arrList.add(all: password.toArray())
       var arr = arrList.toArray()
       writeCommand("AUTH PLAIN ${toBase64String(arr)}")
       readCommand()
@@ -138,7 +138,7 @@ public class Smtp <: Resource{
 
 
    private func putMailData(from: Option<MailAddress>, to: ArrayList<MailAddress>, cc: ArrayList<MailAddress>, bcc: ArrayList<MailAddress>, subject: String, mailData: MailContent): Unit {
-      if (let Some(data) <- mailData as String) {
+      if (let Some(data) <- (mailData as String)) {
          putMailAddressesSubject(from, to, cc, bcc, subject)
          writeCommand("")
          for (line in data.split("\r\n")) {
@@ -148,7 +148,7 @@ public class Smtp <: Resource{
                writeCommand(line)
             }   
          }
-      } else if (let Some(data) <- mailData as MimeText) {
+      } else if (let Some(data) <- (mailData as MimeText)) {
          putMailAddressesSubject(from, to, cc, bcc, subject)
          writeCommand("Content-Type: ${data.contentType}; charset=\"UTF-8\"")
          writeCommand("MIME-Version: 1.0")
@@ -163,7 +163,7 @@ public class Smtp <: Resource{
          }
          writeCommand("")
          writeCommand(toBase64String(data.text.toArray()))
-      } else if (let Some(data) <- mailData as MimeFile) {
+      } else if (let Some(data) <- (mailData as MimeFile)) {
          putMailAddressesSubject(from, to, cc, bcc, subject)
          writeCommand("Content-Type: ${data.contentType}; name=\"${data.contentType}\"")
          writeCommand("Content-Disposition: attachment; filename=\"${data.fileName}\"")
@@ -179,7 +179,7 @@ public class Smtp <: Resource{
          }
          writeCommand("")
          writeCommand(toBase64String(data.data.toArray()))
-      } else if (let Some(data) <- mailData as MimeMutilParts) {
+      } else if (let Some(data) <- (mailData as MimeMutilParts)) {
          let boundary = randomBoundary()
          let mimeType = if (data.contentType == "") {
             "multipart/mixed"
@@ -212,7 +212,7 @@ public class Smtp <: Resource{
             idx = -idx
          }
          idx = idx % chars.size
-         str.append(Rune((chars[idx])))
+         str.add(Rune((chars[idx])))
       }
       let res = String(str.toArray())
       "===============${res}=="

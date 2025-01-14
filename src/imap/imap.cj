@@ -3,7 +3,7 @@ package cj_mail.imap
 import cj_mail.commons.*
 import cj_mail.log.*
 import net.tls.*
-import std.socket.*
+import std.net.*
 import std.regex.*
 import std.io.*
 import std.collection.*
@@ -135,7 +135,7 @@ public class Imap <: Resource{
             if (line.startsWith("* SEARCH ")) {
                 for (str in line.split(" ")[2..]) {
                     if (str != "*") {
-                        result.append(Int64.parse(str))
+                        result.add(Int64.parse(str))
                     }
                 }
             }
@@ -288,12 +288,12 @@ private func parseImapMailResponses(
     idx: String, response: String,
     skipHeaders!: Bool = false, textBody!: Bool = false
 ): ArrayList<ImapReceiveMail> {
-        let reader = StreamReader(ByteArrayStream.fromString(response))
+        let reader = StreamReader(ByteBuffer(response.toArray()))
         let mails = ArrayList<ImapReceiveMail>()
         while(true) {
             let line = reader.readln().getOrThrow({=>MailContentParseException()})
             if (line.startsWith("* ")) {
-                mails.append(parseImapMail(line, reader, skipHeaders: skipHeaders, textBody: textBody))
+                mails.add(parseImapMail(line, reader, skipHeaders: skipHeaders, textBody: textBody))
             } else if (line.startsWith("${idx} ")) {
                 break
             } else {
@@ -309,7 +309,7 @@ private func parseImapMail(
     line: String, reader: StreamReader,
     skipHeaders!: Bool = false, textBody!: Bool = false
 ): ImapReceiveMail {
-    var lineReader = StreamReader(ByteArrayStream.fromString(line.trimAscii()))
+    var lineReader = StreamReader(ByteBuffer(line.trimAscii().toArray()))
     let mail = ImapReceiveMail()
     if (lineReader.readRune().getOrThrow({=>MailContentParseException()}) != r"*") {
         throw MailContentParseException()
@@ -346,7 +346,7 @@ private func parseImapMail(
         } else if (name == "INTERNALDATE") {
             // todo
             let _ = lineReader.readRune() // skip \"
-            let _ = lineReader.readUntil({rune => rune == r'\"'}).getOrThrow().trimRight("\"")
+            let _ = lineReader.readUntil({rune => rune == r'\"'}).getOrThrow().trimEnd("\"")
             // internalDate = time
         } else if (name == "ENVELOPE") {
             // todo
@@ -385,7 +385,7 @@ private func parseImapMail(
                     for (item in list) {
                         match (item) {
                             case ImapValue.LIST(list) =>
-                                to.append(parseImapAddress(list))
+                                to.add(parseImapAddress(list))
                             case _ =>
                                 ()
                         }
@@ -440,7 +440,7 @@ private func parseImapMail(
                 throw MailContentParseException()
             }
             let mailData = reader.readSize(byteCount)
-            lineReader = StreamReader(ByteArrayStream.fromString(reader.readln().getOrThrow({=>MailConnectExcption()})))
+            lineReader = StreamReader(ByteBuffer(reader.readln().getOrThrow({=>MailConnectExcption()}).toArray()))
             let str = String.fromUtf8(mailData)
             if (textBody) {
                 mail.data = str
@@ -544,7 +544,7 @@ public func imapReaderFlags(reader: StreamReader): ArrayList<String> {
     let list = ArrayList<String>()
     func takeFlag() {
         if (builder.size > 0) {
-            list.append(builder.toString())
+            list.add(builder.toString())
             builder = StringBuilder()
         }
     }
