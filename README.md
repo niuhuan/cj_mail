@@ -18,6 +18,8 @@ CJ_MAIL 仓颉邮件工具
 cj_mail = { git = "https://gitcode.com/niuhuan_cn/cj_mail.git" }
 ```
 
+如果您无法使用`Canary`版本, 请使用`cjc_0.53.13`分支
+
 2.&nbsp;执行 `cjpm update` 命令进行依赖更新 
 
 3.&nbsp;在需要使用的仓颉代码中进行引入`import cj_mail.*`
