@@ -103,9 +103,9 @@ public class Pop <: Resource {
     public func stat(): Int64 {
         writeCommand("STAT")
         let line = readCommand()
-        match (popStatePattern.matches(line)) {
+        match (regexGroups(popStatePattern, line)) {
             case Some(r) =>
-                Int64.parse(r.matchStr(1))
+                Int64.parse(r[1])
             case None =>
                 throw Exception("Invalid response")
         }
@@ -142,10 +142,13 @@ public class Pop <: Resource {
     public func list(msg: Int64) : (Int64, Int64) {
         writeCommand("LIST ${msg}")
         let response = readCommand()
-        let matcher = Regex("^(\\+OK )?(\\d+) (\\d+)$").matches(response).getOrThrow({=>Exception("Invalid response")})
-        let idx = Int64.parse(matcher.matchStr(2))
-        let size = Int64.parse(matcher.matchStr(3))
-        (idx, size)
+        if (let Some(r) <- regexGroups(popStatePattern, response)) {
+            let idx = Int64.parse(r[1])
+            let size = Int64.parse(r[2])
+            (idx, size)
+        } else {
+            throw Exception("Invalid response")
+        }
     }
 
     public func retr(msg : Int64) : (Int64, String) {

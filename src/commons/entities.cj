@@ -32,10 +32,10 @@ public class MailAddress <: ToString {
 }
 
 public func parseMailAddress(address: String): MailAddress {
-   match (mailAddressPattern.matches(address)) {
+   match (regexGroups(mailAddressPattern,address)) {
       case Some(matches) =>
-         let name = matches.matchStr(1).trimAscii()
-         let addr = matches.matchStr(2).trimAscii()
+         let name = matches[1].trimAscii()
+         let addr = matches[2].trimAscii()
          MailAddress(decodeSubject(name), addr)
       case None =>
          MailAddress("", address)
@@ -315,7 +315,7 @@ public func parseMailContent(
             parseHeader()
             headerLine += line
             headerLine += "\r\n"
-      } else if (Regex("^\\s+[^\n]+").matches(line).isSome()) {
+      } else if (let Some(_take) <- regexGroups(Regex("^\\s+[^\n]+"), line)) {
             headerLine += " "
             headerLine += line.trimAscii()
       } else {
@@ -509,10 +509,10 @@ protected func decodeSubject(subjectInput: String): String {
       let sp = subject.split("\n")
       for (spItem in sp) {
          let item = spItem.trimAscii()
-         if (let Some(matches) <- subjectEncodeRegexp.matches(item)) {
-            let charset = matches.matchStr(1)
-            let encoding = matches.matchStr(2)
-            let text = matches.matchStr(3)
+         if (let Some(matches) <- regexGroups(subjectEncodeRegexp, item)) {
+            let charset = matches[1]
+            let encoding = matches[2]
+            let text = matches[3]
             let bytes = if (encoding.toAsciiLower() == "b") {
                parseBase64MailContent(text)
             } else if (encoding.toAsciiLower() == "q") {

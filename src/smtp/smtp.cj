@@ -59,11 +59,11 @@ public class Smtp <: Resource{
       while (true) {
          var line = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
          cjMailLogger.trace("S: ${line}", ("package", "cj_mail.smtp"))
-         match (responseBaseRegex.matches(line)) {
+         match (regexGroups(responseBaseRegex, line)) {
             case Some(r) =>
-               let code = Int64.parse(r.matchStr(1))
-               let minusOrSp = r.matchStr(2)
-               let message = r.matchStr(3)
+               let code = Int64.parse(r[1])
+               let minusOrSp = r[2]
+               let message = r[3]
                if (serverResponse.code == 0) {
                   serverResponse.code = code
                } else if (serverResponse.code != code) {

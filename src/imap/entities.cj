@@ -4,6 +4,7 @@ import std.regex.*
 import std.collection.*
 import cj_mail.exception.*
 import std.convert.*
+import cj_mail.commons.regexGroups
 
 public struct MailboxState <: ToString{
     public var exists: Int64
@@ -27,24 +28,24 @@ public struct MailboxState <: ToString{
 
 public func parseMailBoxState(content: String): MailboxState {
     var existsRegex = Regex("\\* (\\d+) EXISTS")
-    var exists = match (existsRegex.matcher(content).find()) {
+    var exists = match (regexGroups(existsRegex, content)) {
         case Some(s) =>
-            Int64.parse(s.matchStr(1))
+            Int64.parse(s[1])
         case None =>
             0
     }
     var recentRegex = Regex("\\* (\\d+) RECENT")
-    var recent = match (recentRegex.matcher(content).find()) {
+    var recent = match (regexGroups(recentRegex, content)) {
         case Some(s) =>
-            Int64.parse(s.matchStr(1))
+            Int64.parse(s[1])
         case None =>
             0
     }
     // * FLAGS (\Answered \Flagged \Deleted \Draft \Seen)
     var flagsRegex = Regex("\\* FLAGS \\((.+)\\)")
-    var flags = match (flagsRegex.matcher(content).find()) {
+    var flags = match (regexGroups(flagsRegex, content)) {
         case Some(s) =>
-            ArrayList<String>(s.matchStr(1).split(" ", removeEmpty : true))
+            ArrayList<String>(s[1].split(" ", removeEmpty : true))
         case None =>
             ArrayList<String>()
     }

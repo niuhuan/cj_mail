@@ -69,10 +69,9 @@ public class Imap <: Resource{
                     builder.append("\r\n")
                     if (line.startsWith("* ")) {
                         if (line.endsWith("}")) {
-                             let matcher = fetchRegex.matcher(line);
-                             match(matcher.find()) {
+                             match(regexGroups(fetchRegex, line)) {
                                     case Some(s) =>
-                                        let len = Int64.parse(s.matchStr(1))
+                                        let len = Int64.parse(s[1])
                                         cjMailLogger.trace(".. for read Rune * ${len} from server ..", ("package", "cj_mail.smtp"))
                                         builder.append(String.fromUtf8(reader.readSize(len)))
                                         let left = reader.readln().getOrThrow({=>MailConnectExcption("Connect has been eof")})
