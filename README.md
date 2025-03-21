@@ -146,6 +146,7 @@ main(): Int64 {
         - [x] `fetchFullText` 获取邮件内容并解析 (包含邮件正文、正文：正文保持纯文本未解析)
     - [x] `STORE` 增改标记（例如已读标记、删除标记、旗帜标记）
     - [x] `MOVE` 移动到其他文件夹
+    - [x] `ID` 告知服务器客户端的类型以及特征
 - [x] Encoding
     - [x] base64
     - [x] quoted-printable

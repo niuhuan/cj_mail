@@ -29,4 +29,5 @@ main(): Int64 {
 | fetchInfo | 获取邮件基本信息（不返回正文）
 | fetchFlags | 获取邮件标志信息（不返回正文）
 | store | `STORE` 对邮件增减标记（已读、标星）或删除邮件
+| id | `ID` 执行ID命令、服务器会对客户端的特征进行不同处理
 | quit | `QUIT`

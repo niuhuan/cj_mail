@@ -258,6 +258,19 @@ public class Imap <: Resource{
         readCommand(idx)
     }
 
+    public func id(properties: List<(String, String)>) {
+        let idx = nextCmdIdx();
+        let propertiesStr = StringBuilder()
+        for (property in properties) {
+            if (propertiesStr.size > 0) {
+                propertiesStr.append(" ")
+            }
+            propertiesStr.append("${property[0]} \"${escapingDoubleQuote(property[1])}\"")
+        }
+        writeCommand("${idx} ID (${propertiesStr})")
+        readCommand(idx)
+    }
+
     public func quit() {
         let idx = nextCmdIdx();
         writeCommand("${idx} LOGOUT")
